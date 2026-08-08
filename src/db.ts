@@ -1,0 +1,176 @@
+import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { Turno, AuditEntry } from "@/types";
+import { ADMIN_CONFIG, HERRAMIENTAS_INICIALES, uid, ahoraISO } from "@/config";
+
+interface DiamantinaDB extends DBSchema {
+  turnos: {
+    key: string;
+    value: Turno;
+  };
+}
+
+const DB_NAME = "diamantina-db";
+const DB_VERSION = 1;
+
+/** Respaldo instantáneo en localStorage (sobrevive desconexión de la tablet). */
+export const LOCAL_TURNO_KEY = "diamantina_turno_actual";
+
+export function guardarTurnoLocalStorage(turno: Turno): void {
+  try {
+    localStorage.setItem(LOCAL_TURNO_KEY, JSON.stringify(turno));
+  } catch {
+    // Cuota llena o almacenamiento no disponible
+  }
+}
+
+function normalizarTurno(raw: Turno): Turno {
+  const insumosRaw = Array.isArray(raw.insumos) ? raw.insumos : [];
+  const insumosVistos = new Set<string>();
+  const insumos = insumosRaw.filter((i) => {
+    if (!i?.id || insumosVistos.has(i.id)) return false;
+    insumosVistos.add(i.id);
+    return true;
+  });
+
+  return {
+    ...raw,
+    tramos: Array.isArray(raw.tramos) ? raw.tramos : [],
+    bitacora: Array.isArray(raw.bitacora) ? raw.bitacora : [],
+    insumos,
+    herramientas: Array.isArray(raw.herramientas) ? raw.herramientas : HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
+    historialRelevos: Array.isArray(raw.historialRelevos) ? raw.historialRelevos : [],
+    historialHerramientas: Array.isArray(raw.historialHerramientas) ? raw.historialHerramientas : [],
+    audit: Array.isArray(raw.audit) ? raw.audit : [],
+    observaciones: raw.observaciones ?? "",
+    firmaDataURL: raw.firmaDataURL ?? null,
+  };
+}
+
+export function cargarTurnoLocalStorage(): Turno | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_TURNO_KEY);
+    if (!raw) return null;
+    return normalizarTurno(JSON.parse(raw) as Turno);
+  } catch {
+    try {
+      localStorage.removeItem(LOCAL_TURNO_KEY);
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+}
+
+let dbPromise: Promise<IDBPDatabase<DiamantinaDB>> | null = null;
+
+function getDB(): Promise<IDBPDatabase<DiamantinaDB>> {
+  if (!dbPromise) {
+    dbPromise = openDB<DiamantinaDB>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("turnos")) {
+          db.createObjectStore("turnos", { keyPath: "id" });
+        }
+      },
+    });
+  }
+  return dbPromise;
+}
+
+function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
+  const ahora = ahoraISO();
+  const id = uid();
+  return {
+    id,
+    fecha: ahora,
+    estado: "borrador",
+    equipo: ADMIN_CONFIG.equipo,
+    faena: ADMIN_CONFIG.faena,
+    sector: "",
+    diametro: "",
+    pozo: "",
+    orientacion: "",
+    profundidadInicial,
+    inicializado: false,
+    operador: "",
+    ayudante1: "",
+    ayudante2: "",
+    ayudante3: "",
+    tramos: [],
+    herramientas: HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
+    historialRelevos: [],
+    historialHerramientas: [],
+    bitacora: [],
+    insumos: [],
+    observaciones: "",
+    firmaDataURL: null,
+    audit: [
+      { timestamp: ahora, accion: "turno_creado", detalle: "Turno creado localmente" },
+    ],
+    iniciadoEn: null,
+    cerradoEn: null,
+    cloudId: id,
+  };
+}
+
+export async function cargarTurnoActual(): Promise<Turno> {
+  // 1) localStorage primero — recuperación instantánea en la tablet
+  const desdeLS = cargarTurnoLocalStorage();
+  if (desdeLS && desdeLS.estado !== "cerrado") {
+    const turno = normalizarTurno(desdeLS);
+    getDB()
+      .then((db) => db.put("turnos", turno))
+      .catch(() => {});
+    return turno;
+  }
+
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  const abiertos = todos.filter((t) => t.estado !== "cerrado");
+  if (abiertos.length > 0) {
+    const turno = normalizarTurno(abiertos.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0]);
+    guardarTurnoLocalStorage(turno);
+    return turno;
+  }
+  // Crear nuevo heredando profundidad inicial del último cerrado
+  const cerrados = todos.filter((t) => t.estado === "cerrado");
+  let profundidadInicial: number | null = null;
+  if (cerrados.length > 0) {
+    const ultimo = cerrados.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0];
+    const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
+    if (ultimoTramo && ultimoTramo.hasta != null) {
+      profundidadInicial = ultimoTramo.hasta;
+    }
+  }
+  const nuevo = crearTurnoNuevo(profundidadInicial);
+  guardarTurnoLocalStorage(nuevo);
+  await db.put("turnos", nuevo);
+  return nuevo;
+}
+
+export async function guardarTurno(turno: Turno): Promise<void> {
+  guardarTurnoLocalStorage(turno);
+  const db = await getDB();
+  await db.put("turnos", turno);
+}
+
+export function pushAudit(turno: Turno, accion: string, detalle: string): Turno {
+  const entry: AuditEntry = { timestamp: ahoraISO(), accion, detalle };
+  return { ...turno, audit: [...turno.audit, entry] };
+}
+
+export async function cerrarTurno(turno: Turno): Promise<Turno> {
+  const conAudit = pushAudit(turno, "turno_cerrado", "Reporte inmutable generado");
+  const cerrado: Turno = {
+    ...conAudit,
+    estado: "cerrado",
+    cerradoEn: ahoraISO(),
+  };
+  await guardarTurno(cerrado);
+  return cerrado;
+}
+
+export async function contarTurnosCerrados(): Promise<number> {
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  return todos.filter((t) => t.estado === "cerrado").length;
+}

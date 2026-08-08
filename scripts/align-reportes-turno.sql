@@ -1,0 +1,3 @@
+-- DEPRECATED: usar scripts/align-supabase-schema.sql
+-- Ese archivo cubre las 5 tablas: reportes_turno, turno_trames, turno_bitacora,
+-- turno_insumos y turno_documentos_legales (columnas, RLS y realtime).

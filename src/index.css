@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select {
+  -webkit-user-select: text;
+  user-select: text;
+  font-size: 16px;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@layer components {
+  .campo-label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1;
+  }
+  .campo-input {
+    @apply w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-base text-slate-100
+      placeholder-slate-500 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30
+      disabled:cursor-not-allowed disabled:bg-slate-900/60 disabled:text-slate-400;
+  }
+  .campo-bloqueado {
+    @apply w-full rounded-lg border border-slate-700/60 bg-slate-900/70 px-4 py-3 text-base text-slate-300
+      cursor-not-allowed flex items-center gap-2;
+  }
+  .btn-grande {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3.5 text-base font-bold
+      transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 select-none;
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 5px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

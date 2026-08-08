@@ -43,7 +43,7 @@ export function ControlTramos({
   const primerTramoDesde = tramos.length > 0 ? tramos[0].desde : profundidadInicial ?? 0;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col lg:flex-row gap-4 lg:h-full">
       {/* Tabla de tramos - protagonista */}
       <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60 overflow-hidden">
         {/* Banner verde gigante */}

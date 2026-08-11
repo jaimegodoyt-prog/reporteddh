@@ -960,7 +960,7 @@ export default function App() {
             />
           )}
           {pestaña === "tramos" && (
-            <div className="h-[calc(100vh-140px)] min-h-[820px]">
+            <div>
               {esUUIDValido(turno.cloudId) ? (
                 <ControlTramos
                   tramos={turno.tramos}
@@ -985,7 +985,7 @@ export default function App() {
                   onBlurCasing={syncCasingOnBlur}
                 />
               ) : (
-                <div className="flex items-center justify-center h-full">
+                <div className="flex items-center justify-center py-24">
                   <div className="text-center bg-amber-500/10 border border-amber-500/30 rounded-xl p-8 max-w-md">
                     <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
                     <p className="text-lg font-bold text-amber-300">Por favor, inicie el turno en la Pestana 1 primero</p>

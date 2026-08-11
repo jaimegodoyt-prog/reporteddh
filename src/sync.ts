@@ -607,6 +607,95 @@ export async function syncInsumos(turno: Turno): Promise<SyncResult> {
     return errResult(e, "upsert turno_insumos");
   }
 }
+// Sync individual de una fila de Otros Insumos
+export async function syncOtroInsumo(o: OtroInsumo, reporteId: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase
+      .from("turno_otros_insumos")
+      .upsert({ ...otroInsumoRow(o, reporteId), id: o.id });
+    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    if (esErrorDeRed(e)) {
+      encolar({ tipo: "otrosinsumos", turnoId: reporteId, payload: o });
+      return { ok: true, error: null, offline: true };
+    }
+    return errResult(e, "upsert turno_otros_insumos");
+  }
+}
+
+export async function deleteOtroInsumoCloud(id: string, reporteId: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase.from("turno_otros_insumos").delete().eq("id", id);
+    if (error) return { ok: false, error: `delete turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    if (esErrorDeRed(e)) {
+      encolar({ tipo: "otrosinsumos", turnoId: reporteId, payload: { id, _delete: true } });
+      return { ok: true, error: null, offline: true };
+    }
+    return errResult(e, "delete turno_otros_insumos");
+  }
+}
+
+// Sync batch de Otros Insumos
+export async function syncOtrosInsumos(turno: Turno): Promise<SyncResult> {
+  try {
+    const rid = turno.cloudId ?? turno.id;
+    const { error: delErr } = await supabase.from("turno_otros_insumos").delete().eq("reporte_id", rid);
+    if (delErr) return { ok: false, error: `delete turno_otros_insumos: ${delErr.message}` };
+    if (turno.otrosInsumos.length === 0) return { ok: true, error: null };
+    const rows = turno.otrosInsumos.map((o) => ({ ...otroInsumoRow(o, rid), id: o.id }));
+    const { error } = await supabase.from("turno_otros_insumos").upsert(rows);
+    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    if (esErrorDeRed(e)) {
+      encolar({ tipo: "otrosinsumos", turnoId: turno.id, payload: turno });
+      return { ok: true, error: null, offline: true };
+    }
+    return errResult(e, "upsert turno_otros_insumos");
+  }
+}
+
+// Sync individual de una fila de Herramientas
+export async function syncHerramienta(h: HerramientaFila, reporteId: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase
+      .from("turno_herramientas")
+      .upsert({ ...herramientaRow(h, reporteId), id: h.id });
+    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    if (esErrorDeRed(e)) {
+      encolar({ tipo: "herramientas", turnoId: reporteId, payload: h });
+      return { ok: true, error: null, offline: true };
+    }
+    return errResult(e, "upsert turno_herramientas");
+  }
+}
+
+// Sync batch de Herramientas
+export async function syncHerramientas(turno: Turno): Promise<SyncResult> {
+  try {
+    const rid = turno.cloudId ?? turno.id;
+    if (turno.herramientas.length === 0) {
+      const { error: delErr } = await supabase.from("turno_herramientas").delete().eq("reporte_id", rid);
+      if (delErr) return { ok: false, error: `delete turno_herramientas: ${delErr.message}` };
+      return { ok: true, error: null };
+    }
+    const rows = turno.herramientas.map((h) => ({ ...herramientaRow(h, rid), id: h.id }));
+    const { error } = await supabase.from("turno_herramientas").upsert(rows);
+    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    if (esErrorDeRed(e)) {
+      encolar({ tipo: "reporte", turnoId: turno.id, payload: turno });
+      return { ok: true, error: null, offline: true };
+    }
+    return errResult(e, "upsert turno_herramientas");
+  }
+}
 
 // TABLA 5: Cierre — UPDATE reportes_turno + INSERT turno_documentos_legales
 export async function cerrarTurnoCloud(turno: Turno): Promise<SyncResult> {

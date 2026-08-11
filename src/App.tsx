@@ -17,6 +17,7 @@ import {
   pushAudit,
   buscarUltimosTurnosPorPozo,
   buscarUltimaHerramientaPorTipo,
+  buscarUltimoHorometroFinal,
 } from "@/db";
 import {
   uid,

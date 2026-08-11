@@ -236,6 +236,27 @@ export default function App() {
     [turno, patchTurno],
   );
 
+  // Horómetro Inicial: se arrastra 100% local desde el último "Horómetro
+  // Final" registrado en esta tablet (sin importar el pozo). La primera vez
+  // que se usa la app, parte en 0.
+  useEffect(() => {
+    if (!turno || turno.inicializado || turno.horometroInicial != null) return;
+    const tId = turno.id;
+    buscarUltimoHorometroFinal().then((valor) => {
+      if (turnoRef.current?.id === tId && turnoRef.current.horometroInicial == null) {
+        patchTurno({ horometroInicial: valor ?? 0 });
+      }
+    });
+  }, [turno?.id, turno?.inicializado]);
+
+  const cambiarHorometroFinal = useCallback(
+    (v: number | null) => {
+      if (!turno) return;
+      persistirYSync({ ...turno, horometroFinal: v }, "reporte");
+    },
+    [turno, persistirYSync],
+  );
+
   // Escucha en tiempo real: métricas y datos remotos en segundos
   useEffect(() => {
     const cloudId = turno?.cloudId;

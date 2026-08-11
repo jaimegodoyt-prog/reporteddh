@@ -147,7 +147,7 @@ function reporteRowInicial(t: Turno) {
 
 function profundidadFinalTurno(t: Turno): number | null {
   const ultimo = t.tramos[t.tramos.length - 1];
-  return ultimo?.hasta ?? t.profundidadInicial;
+  return ultimo?.fondo ?? t.profundidadInicial;
 }
 
 // Para upsert/update posterior (mismos campos base, puede incluir estado y cerrado_el)

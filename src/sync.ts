@@ -13,7 +13,7 @@ const COLA_KEY = "diamantina_cola_sync";
 
 type ItemCola = {
   id: string;
-  tipo: "reporte" | "tramo" | "bitacora" | "insumos" | "casing";
+  tipo: "reporte" | "tramo" | "bitacora" | "insumos" | "casing" | "otrosinsumos" | "herramientas";
   turnoId: string;
   payload: unknown;
   orden?: number;

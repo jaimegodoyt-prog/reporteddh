@@ -12,6 +12,7 @@ import {
   Fuel,
   Boxes,
   Wrench,
+  Gauge,
 } from "lucide-react";
 import type {
   Insumo,

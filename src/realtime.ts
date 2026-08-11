@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "@/supabaseClient";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import type { Turno, Tramo, ActividadBitacora, Insumo, HerramientaTipo, CargoHora, UnidadInsumo } from "@/types";
+import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo, HerramientaTipo, UnidadInsumo } from "@/types";
 
 export type MetricasNube = {
   profundidadFinal: number | null;
@@ -26,6 +26,15 @@ type FilaTramo = {
   perf?: number | null;
   recuperacion_porcentaje?: number | null;
   tipo_roca?: string | null;
+  created_at?: string;
+};
+
+type FilaCasing = {
+  id?: string;
+  diametro?: string;
+  desde?: number;
+  agrega?: number | null;
+  total?: number;
   created_at?: string;
 };
 
@@ -78,6 +87,19 @@ function mapTramo(row: FilaTramo, idx: number): Tramo {
   };
 }
 
+function mapCasing(row: FilaCasing, idx: number): CasingRow {
+  const desde = Number(row.desde ?? 0);
+  const agrega = row.agrega != null ? Number(row.agrega) : null;
+  return {
+    id: (row.id as string) ?? `rt-c-${idx}`,
+    diametro: row.diametro ?? "",
+    desde,
+    agrega,
+    total: row.total != null ? Number(row.total) : desde + (agrega ?? 0),
+    creadoEn: row.created_at ?? new Date().toISOString(),
+  };
+}
+
 function mapBitacora(row: FilaBitacora, idx: number): ActividadBitacora {
   return {
     id: (row.id as string) ?? `rt-b-${idx}`,
@@ -85,7 +107,6 @@ function mapBitacora(row: FilaBitacora, idx: number): ActividadBitacora {
     horaHasta: row.hora_hasta ?? null,
     codigoOperacion: row.codigo_operacion ?? "",
     detalle: row.detalle ?? "",
-    cargoHora: (row.cargo_hora as CargoHora) ?? "propia",
     creadoEn: row.created_at ?? new Date().toISOString(),
   };
 }
@@ -104,15 +125,17 @@ async function cargarDatosNube(
   cloudId: string,
   profundidadInicial: number | null,
 ): Promise<ActualizacionRealtime | null> {
-  const [reporteRes, tramosRes, bitacoraRes, insumosRes] = await Promise.all([
+  const [reporteRes, tramosRes, casingRes, bitacoraRes, insumosRes] = await Promise.all([
     supabase.from("reportes_turno").select("profundidad_final, profundidad_inicial, updated_at").eq("id", cloudId).maybeSingle(),
     supabase.from("turno_trames").select("*").eq("reporte_id", cloudId).order("created_at"),
+    supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("created_at"),
     supabase.from("turno_bitacora").select("*").eq("reporte_id", cloudId).order("created_at"),
     supabase.from("turno_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
   ]);
 
   const reporte = reporteRes.data as FilaReporte | null;
   const tramos = ((tramosRes.data ?? []) as FilaTramo[]).map(mapTramo);
+  const casing = ((casingRes.data ?? []) as FilaCasing[]).map(mapCasing);
   const bitacora = ((bitacoraRes.data ?? []) as FilaBitacora[]).map(mapBitacora);
   const insumos = ((insumosRes.data ?? []) as FilaInsumo[]).map(mapInsumo);
 
@@ -129,7 +152,7 @@ async function cargarDatosNube(
       totalInsumos: insumos.length,
       actualizadoEn: reporte?.updated_at ?? new Date().toISOString(),
     },
-    parche: { tramos, bitacora, insumos },
+    parche: { tramos, casing, bitacora, insumos },
   };
 }
 
@@ -159,6 +182,11 @@ export function suscribirTurnoRealtime(
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "turno_trames", filter: `reporte_id=eq.${cloudId}` },
+      () => void notificar("tramos"),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "turno_casing", filter: `reporte_id=eq.${cloudId}` },
       () => void notificar("tramos"),
     )
     .on(

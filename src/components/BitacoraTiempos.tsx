@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, Trash2, Clock, Search, BookOpen } from "lucide-react";
+import { Plus, Trash2, Clock, Search, BookOpen, Lock } from "lucide-react";
 import type { ActividadBitacora } from "@/types";
 import { CODIGOS_OPERACION, codigoCompleto, diffHoras, horaActualLocal } from "@/config";
 
@@ -42,7 +42,7 @@ export function BitacoraTiempos({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div>
         {bitacora.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
@@ -75,18 +75,10 @@ export function BitacoraTiempos({
                     className={`border-t border-slate-700/50 ${esUltimo ? "bg-sky-500/5" : ""}`}
                   >
                     <td className="px-3 py-2">
-                      <input
-                        type="time"
-                        value={act.horaDesde}
-                        onChange={(e) => onChange(act.id, { horaDesde: e.target.value })}
-                        onBlur={() => onBlurActividad(act.id)}
-                        disabled={!esUltimo}
-                        className={`w-24 rounded-md border px-2 py-2 text-base font-bold outline-none transition ${
-                          esUltimo
-                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
-                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                        }`}
-                      />
+                      <div className="flex items-center gap-1.5 text-slate-400 font-bold w-24 px-2 py-2">
+                        <Lock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                        {act.horaDesde}
+                      </div>
                     </td>
                     <td className="px-3 py-2">
                       <input
@@ -104,6 +96,7 @@ export function BitacoraTiempos({
                         }`}
                       />
                     </td>
+
                     <td className="px-3 py-2">
                       <span
                         className={`font-black text-base ${

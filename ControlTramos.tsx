@@ -109,6 +109,91 @@ export function ControlTramos({
           </div>
         </div>
 
+        {/* Sección Casing */}
+        <div className="border-b border-slate-700/60 bg-slate-900/40 px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-sky-400" />
+              Casing
+            </h3>
+            {turnoActivo && (
+              <button
+                onClick={onAgregarCasing}
+                className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 text-xs font-bold text-white transition active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Agregar fila
+              </button>
+            )}
+          </div>
+          {casing.length === 0 ? (
+            <p className="text-xs text-slate-500">Sin registros de Casing en este turno.</p>
+          ) : (
+            <div className="overflow-auto scrollbar-thin">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <th className="px-2 py-1">Diámetro</th>
+                    <th className="px-2 py-1">Desde</th>
+                    <th className="px-2 py-1">Agrega</th>
+                    <th className="px-2 py-1">Total Casing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {casing.map((c, idx) => {
+                    const esUltimo = idx === casing.length - 1;
+                    return (
+                      <tr key={c.id} className="border-t border-slate-800">
+                        <td className="px-2 py-1.5">
+                          <input
+                            value={c.diametro}
+                            onChange={(e) => onChangeCasing(c.id, { diametro: e.target.value })}
+                            onBlur={() => onBlurCasing(c.id)}
+                            disabled={!esUltimo}
+                            placeholder="Ej. HWT"
+                            className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                              esUltimo
+                                ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500"
+                                : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                            }`}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <div className="flex items-center gap-1 text-slate-400 font-bold">
+                            <Lock className="w-3 h-3 text-slate-600 shrink-0" />
+                            {c.desde.toFixed(2)}
+                          </div>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            value={c.agrega ?? ""}
+                            onChange={(e) =>
+                              onChangeCasing(c.id, {
+                                agrega: e.target.value === "" ? null : Number(e.target.value),
+                              })
+                            }
+                            onBlur={() => onBlurCasing(c.id)}
+                            disabled={!esUltimo}
+                            step="0.01"
+                            placeholder="0"
+                            className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                              esUltimo
+                                ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500"
+                                : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                            }`}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 font-black text-sky-300">{c.total.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
         {/* Encabezado: Cálculo de herramienta */}
         <div className="border-b border-slate-700/60 bg-slate-900/40 px-4 py-3 shrink-0">
           <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-2">
@@ -165,7 +250,7 @@ export function ControlTramos({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-auto scrollbar-thin">
           {tramos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-6">
               <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
@@ -356,91 +441,6 @@ export function ControlTramos({
             </p>
           </div>
         )}
-
-        {/* Sección Casing - debajo del control de tramos */}
-        <div className="border-t-4 border-slate-950 bg-slate-900/40 px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-sky-400" />
-              Casing
-            </h3>
-            {turnoActivo && (
-              <button
-                onClick={onAgregarCasing}
-                className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 text-xs font-bold text-white transition active:scale-95"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Agregar fila
-              </button>
-            )}
-          </div>
-          {casing.length === 0 ? (
-            <p className="text-xs text-slate-500">Sin registros de Casing en este turno.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    <th className="px-2 py-1">Diámetro</th>
-                    <th className="px-2 py-1">Desde</th>
-                    <th className="px-2 py-1">Agrega</th>
-                    <th className="px-2 py-1">Total Casing</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {casing.map((c, idx) => {
-                    const esUltimo = idx === casing.length - 1;
-                    return (
-                      <tr key={c.id} className="border-t border-slate-800">
-                        <td className="px-2 py-1.5">
-                          <input
-                            value={c.diametro}
-                            onChange={(e) => onChangeCasing(c.id, { diametro: e.target.value })}
-                            onBlur={() => onBlurCasing(c.id)}
-                            disabled={!esUltimo}
-                            placeholder="Ej. HWT"
-                            className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
-                              esUltimo
-                                ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500"
-                                : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                            }`}
-                          />
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <div className="flex items-center gap-1 text-slate-400 font-bold">
-                            <Lock className="w-3 h-3 text-slate-600 shrink-0" />
-                            {c.desde.toFixed(2)}
-                          </div>
-                        </td>
-                        <td className="px-2 py-1.5">
-                          <input
-                            type="number"
-                            value={c.agrega ?? ""}
-                            onChange={(e) =>
-                              onChangeCasing(c.id, {
-                                agrega: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            onBlur={() => onBlurCasing(c.id)}
-                            disabled={!esUltimo}
-                            step="0.01"
-                            placeholder="0"
-                            className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
-                              esUltimo
-                                ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500"
-                                : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                            }`}
-                          />
-                        </td>
-                        <td className="px-2 py-1.5 font-black text-sky-300">{c.total.toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </section>
 
       {/* Panel lateral de herramientas */}

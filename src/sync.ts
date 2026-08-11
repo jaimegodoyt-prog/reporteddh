@@ -209,7 +209,6 @@ function bitacoraRow(a: ActividadBitacora, reporteId: string) {
     hora_hasta: a.horaHasta,
     codigo_operacion: a.codigoOperacion,
     detalle: a.detalle,
-    cargo_hora: a.cargoHora,
   };
 }
 
@@ -460,9 +459,9 @@ export async function syncBitacora(turno: Turno): Promise<SyncResult> {
       if (delErr) return { ok: false, error: `delete turno_bitacora: ${delErr.message}` };
       return { ok: true, error: null };
     }
-    const rows = turno.bitacora.map((a) => bitacoraRow(a, rid));
-    const { error } = await supabase.from("turno_bitacora").insert(rows);
-    if (error) return { ok: false, error: `insert turno_bitacora: ${error.message}` };
+    const rows = turno.bitacora.map((a) => ({ ...bitacoraRow(a, rid), id: a.id }));
+    const { error } = await supabase.from("turno_bitacora").upsert(rows);
+    if (error) return { ok: false, error: `upsert turno_bitacora: ${error.message}` };
     return { ok: true, error: null };
   } catch (e) {
     if (esErrorDeRed(e)) {

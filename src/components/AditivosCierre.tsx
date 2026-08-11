@@ -54,6 +54,7 @@ export function AditivosCierre({
   onBlurInsumos,
   onEliminarInsumo,
   onChangeDiesel,
+  onChangeHorometroFinal,
   onAgregarOtroInsumo,
   onChangeOtroInsumo,
   onBlurOtrosInsumos,

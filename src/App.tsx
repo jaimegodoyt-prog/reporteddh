@@ -1006,6 +1006,7 @@ export default function App() {
                   turnoActivo={turnoActivo}
                   onAgregar={agregarActividad}
                   onChange={cambiarActividad}
+                  onCerrarActividad={cerrarActividad}
                   onBlurActividad={syncActividadOnBlur}
                   onEliminar={eliminarActividad}
                 />

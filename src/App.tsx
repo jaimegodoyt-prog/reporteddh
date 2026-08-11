@@ -1177,12 +1177,20 @@ export default function App() {
                 onChangeInsumo={cambiarInsumo}
                 onBlurInsumos={syncInsumosOnBlur}
                 onEliminarInsumo={eliminarInsumo}
+                onChangeDiesel={cambiarDiesel}
+                onAgregarOtroInsumo={agregarOtroInsumo}
+                onChangeOtroInsumo={cambiarOtroInsumo}
+                onBlurOtrosInsumos={syncOtrosInsumosOnBlur}
+                onEliminarOtroInsumo={eliminarOtroInsumo}
+                onAgregarHerramienta={agregarHerramienta}
+                onChangeHerramienta={cambiarHerramienta}
+                onBlurHerramienta={syncHerramientaOnBlur}
                 onChangeObservaciones={(v) => patchTurno({ observaciones: v })}
                 onFirmaChange={(v) => patchTurno({ firmaDataURL: v })}
                 onCerrarTurno={cerrarTurno}
               />
             ) : (
-              <div className="flex items-center justify-center h-[calc(100vh-140px)]">
+              <div className="flex items-center justify-center py-24">
                 <div className="text-center bg-amber-500/10 border border-amber-500/30 rounded-xl p-8 max-w-md">
                   <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
                   <p className="text-lg font-bold text-amber-300">Por favor, inicie el turno en la Pestana 1 primero</p>

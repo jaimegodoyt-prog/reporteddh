@@ -43,6 +43,9 @@ function normalizarTurno(raw: Turno): Turno {
     audit: Array.isArray(raw.audit) ? raw.audit : [],
     observaciones: raw.observaciones ?? "",
     firmaDataURL: raw.firmaDataURL ?? null,
+    programado: raw.programado ?? null,
+    casingDiametro: raw.casingDiametro ?? "",
+    casingProfundidad: raw.casingProfundidad ?? null,
   };
 }
 
@@ -90,6 +93,9 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     pozo: "",
     orientacion: "",
     profundidadInicial,
+    programado: null,
+    casingDiametro: "",
+    casingProfundidad: null,
     inicializado: false,
     operador: "",
     ayudante1: "",
@@ -173,4 +179,25 @@ export async function contarTurnosCerrados(): Promise<number> {
   const db = await getDB();
   const todos = await db.getAll("turnos");
   return todos.filter((t) => t.estado === "cerrado").length;
+}
+
+/**
+ * Busca en el historial local de la tablet (todos los turnos ya guardados en
+ * este dispositivo, sin necesidad de señal) los últimos turnos que
+ * trabajaron el mismo número de pozo. Se usa para autocompletar datos al
+ * iniciar un turno nuevo sobre un pozo ya conocido por esta tablet.
+ */
+export async function buscarUltimosTurnosPorPozo(
+  pozo: string,
+  cantidad: number = 2,
+): Promise<Turno[]> {
+  const pozoNorm = pozo.trim().toLowerCase();
+  if (!pozoNorm) return [];
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  return todos
+    .filter((t) => t.pozo.trim().toLowerCase() === pozoNorm && t.estado !== "borrador")
+    .sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0))
+    .slice(0, cantidad)
+    .map(normalizarTurno);
 }

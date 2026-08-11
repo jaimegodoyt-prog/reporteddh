@@ -20,7 +20,7 @@ import type {
   ActividadBitacora,
   Insumo,
 } from "@/types";
-import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit } from "@/db";
+import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit, buscarUltimosTurnosPorPozo } from "@/db";
 import {
   uid,
   ahoraISO,
@@ -48,10 +48,10 @@ import { AditivosCierre } from "@/components/AditivosCierre";
 type Pestaña = "inicializacion" | "tramos" | "bitacora" | "cierre";
 
 const PESTANAS: { id: Pestaña; label: string; icon: React.ReactNode }[] = [
-  { id: "inicializacion", label: "Inicialización", icon: <Settings className="w-4 h-4" /> },
-  { id: "tramos", label: "Control de Tramos", icon: <Layers className="w-4 h-4" /> },
+  { id: "inicializacion", label: "Datos", icon: <Settings className="w-4 h-4" /> },
+  { id: "tramos", label: "Tramos", icon: <Layers className="w-4 h-4" /> },
   { id: "bitacora", label: "Bitácora", icon: <Clock className="w-4 h-4" /> },
-  { id: "cierre", label: "Aditivos y Cierre", icon: <Package className="w-4 h-4" /> },
+  { id: "cierre", label: "Insumos", icon: <Package className="w-4 h-4" /> },
 ];
 
 function idLocalFallback(): string {
@@ -193,6 +193,35 @@ export default function App() {
       persistirYSync({ ...turno, ...patch }, "reporte");
     },
     [turno, persistirYSync],
+  );
+
+  // Al escribir el número de pozo (antes de iniciar el turno), busca en el
+  // historial guardado en esta tablet si ya se trabajó ese pozo antes, y
+  // autocompleta Profundidad Inicial / Programado / Casing. No requiere
+  // señal: el historial vive en el dispositivo.
+  const buscarDatosPozo = useCallback(
+    async (pozo: string) => {
+      if (!turno || turno.inicializado || !pozo.trim()) return;
+      const anteriores = await buscarUltimosTurnosPorPozo(pozo, 2);
+      const ultimo = anteriores[0];
+      if (!ultimo) return;
+      const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
+      const patch: Partial<Turno> = {};
+      if (turno.profundidadInicial == null && ultimoTramo?.hasta != null) {
+        patch.profundidadInicial = ultimoTramo.hasta;
+      }
+      if (turno.programado == null && ultimo.programado != null) {
+        patch.programado = ultimo.programado;
+      }
+      if (!turno.casingDiametro && ultimo.casingDiametro) {
+        patch.casingDiametro = ultimo.casingDiametro;
+      }
+      if (turno.casingProfundidad == null && ultimo.casingProfundidad != null) {
+        patch.casingProfundidad = ultimo.casingProfundidad;
+      }
+      if (Object.keys(patch).length > 0) patchTurno(patch);
+    },
+    [turno, patchTurno],
   );
 
   // Escucha en tiempo real: métricas y datos remotos en segundos
@@ -802,6 +831,7 @@ export default function App() {
               metricasNube={metricasNube}
               realtimeActivo={realtimeActivo}
               onChange={patchTurno}
+              onBuscarPozo={buscarDatosPozo}
               onIniciar={() => autoSaveReporte(turnoRef.current ?? turno)}
               onIniciarEnNube={iniciarTurnoEnNube}
               iniciandoNube={iniciandoNube}

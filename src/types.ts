@@ -81,6 +81,9 @@ export interface Turno {
   pozo: string;
   orientacion: string;
   profundidadInicial: number | null;
+  programado: number | null;
+  casingDiametro: string;
+  casingProfundidad: number | null;
   inicializado: boolean;
 
   // Operadores (editables en cualquier momento)

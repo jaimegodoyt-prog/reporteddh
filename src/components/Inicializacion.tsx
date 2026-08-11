@@ -26,6 +26,7 @@ interface Props {
   metricasNube: MetricasNube | null;
   realtimeActivo: boolean;
   onChange: (patch: Partial<Turno>) => void;
+  onBuscarPozo: (pozo: string) => void;
   onIniciar: () => void;
   onIniciarEnNube: () => void;
   iniciandoNube: boolean;
@@ -52,6 +53,7 @@ export function Inicializacion({
   metricasNube,
   realtimeActivo,
   onChange,
+  onBuscarPozo,
   onIniciar,
   onIniciarEnNube,
   iniciandoNube,
@@ -179,21 +181,22 @@ export function Inicializacion({
               label="Diámetro"
               value={turno.diametro}
               disabled={congelado}
-              placeholder="Ej. 6 1/2 in"
+              placeholder="Ej. HQ, NQ"
               onChange={(v) => onChange({ diametro: v })}
             />
             <Campo
               label="Pozo"
               value={turno.pozo}
               disabled={congelado}
-              placeholder="Ej. PQ-1024"
+              placeholder="Ej. DDH-01"
               onChange={(v) => onChange({ pozo: v })}
+              onBlurExtra={onBuscarPozo}
             />
             <Campo
               label="Orientación"
               value={turno.orientacion}
               disabled={congelado}
-              placeholder="Ej. 90° vertical"
+              placeholder="Ej. -80°"
               onChange={(v) => onChange({ orientacion: v })}
             />
             <CampoNumero
@@ -203,6 +206,40 @@ export function Inicializacion({
               placeholder="0"
               onChange={(v) => onChange({ profundidadInicial: v })}
             />
+            <CampoNumero
+              label="Programado (m)"
+              value={turno.programado}
+              disabled={congelado}
+              placeholder="0"
+              onChange={(v) => onChange({ programado: v })}
+            />
+          </div>
+
+          {/* Casing - se autocompleta desde la pestaña Tramos */}
+          <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Casing
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="campo-label">Diámetro</span>
+                <div className="campo-bloqueado">
+                  <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="font-bold text-slate-200">
+                    {turno.casingDiametro || "—"}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="campo-label">Profundidad</span>
+                <div className="campo-bloqueado">
+                  <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="font-bold text-slate-200">
+                    {turno.casingProfundidad != null ? `${turno.casingProfundidad} m` : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -331,7 +368,7 @@ export function Inicializacion({
               ) : (
                 <Cloud className="w-6 h-6" />
               )}
-              {iniciandoNube ? "Insertando en Supabase..." : "INICIAR TURNO EN LA NUBE"}
+              {iniciandoNube ? "Insertando en Supabase..." : "Iniciar turno"}
             </button>
 
             {/* Botón secundario: iniciar solo local */}
@@ -406,7 +443,7 @@ export function Inicializacion({
 
         {diag && diag.estado === "idle" && (
           <p className="text-sm text-slate-500">
-            Sin peticiones realizadas aún. Presiona "Probar conexión" o "INICIAR TURNO EN LA NUBE".
+            Sin peticiones realizadas aún. Presiona "Probar conexión" o "Iniciar turno".
           </p>
         )}
 
@@ -500,12 +537,14 @@ function Campo({
   onChange,
   placeholder,
   disabled,
+  onBlurExtra,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  onBlurExtra?: (value: string) => void;
 }) {
   return (
     <div>
@@ -514,7 +553,11 @@ function Campo({
         className="campo-input"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={(ev) => onChange(ev.target.value.trim())}
+        onBlur={(ev) => {
+          const v = ev.target.value.trim();
+          onChange(v);
+          onBlurExtra?.(v);
+        }}
         placeholder={placeholder}
         disabled={disabled}
         autoComplete="off"

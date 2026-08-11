@@ -198,6 +198,35 @@ export function AditivosCierre({
         </div>
       </section>
 
+      {/* Horómetro Final */}
+      <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
+        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-3">
+          <Gauge className="w-5 h-5 text-sky-400" />
+          Horómetro Final
+        </h2>
+        <div className="max-w-xs">
+          <span className="campo-label">Horómetro Final</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={turno.horometroFinal ?? ""}
+            onChange={(e) =>
+              onChangeHorometroFinal(e.target.value === "" ? null : Number(e.target.value))
+            }
+            disabled={turnoCerrado}
+            min={0}
+            step="0.1"
+            placeholder="0"
+            className="campo-input text-lg font-bold"
+          />
+        </div>
+        {turno.horometroInicial != null && (
+          <p className="text-xs text-slate-500 mt-2">
+            Horómetro inicial de este turno: {turno.horometroInicial}
+          </p>
+        )}
+      </section>
+
       {/* Bloque 3: Otros insumos */}
       <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
         <div className="flex items-center justify-between mb-4">

@@ -1,7 +1,28 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Plus, Trash2, Package, MessageSquare, PenLine, Eraser, Lock, CheckCircle2, Cloud } from "lucide-react";
-import type { Insumo, UnidadInsumo, Turno } from "@/types";
-import { fechaHora } from "@/config";
+import {
+  Plus,
+  Trash2,
+  Package,
+  MessageSquare,
+  PenLine,
+  Eraser,
+  Lock,
+  CheckCircle2,
+  Cloud,
+  Fuel,
+  Boxes,
+  Wrench,
+} from "lucide-react";
+import type {
+  Insumo,
+  UnidadInsumo,
+  Turno,
+  OtroInsumo,
+  HerramientaFila,
+  HerramientaTipo,
+  EstadoHerramienta,
+} from "@/types";
+import { fechaHora, HERRAMIENTA_LABELS, HERRAMIENTA_ORDEN } from "@/config";
 
 interface Props {
   turno: Turno;
@@ -9,12 +30,21 @@ interface Props {
   onChangeInsumo: (id: string, patch: Partial<Insumo>) => void;
   onBlurInsumos: () => void;
   onEliminarInsumo: (id: string) => void;
+  onChangeDiesel: (v: number | null) => void;
+  onAgregarOtroInsumo: () => void;
+  onChangeOtroInsumo: (id: string, patch: Partial<OtroInsumo>) => void;
+  onBlurOtrosInsumos: () => void;
+  onEliminarOtroInsumo: (id: string) => void;
+  onAgregarHerramienta: (tipo: HerramientaTipo) => void;
+  onChangeHerramienta: (id: string, patch: Partial<HerramientaFila>) => void;
+  onBlurHerramienta: (id: string) => void;
   onChangeObservaciones: (v: string) => void;
   onFirmaChange: (dataUrl: string | null) => void;
   onCerrarTurno: () => void;
 }
 
 const UNIDADES: UnidadInsumo[] = ["Saco", "Litro", "Balde", "Barra"];
+const ESTADOS: EstadoHerramienta[] = ["Nuevo", "Usado"];
 
 export function AditivosCierre({
   turno,
@@ -22,6 +52,14 @@ export function AditivosCierre({
   onChangeInsumo,
   onBlurInsumos,
   onEliminarInsumo,
+  onChangeDiesel,
+  onAgregarOtroInsumo,
+  onChangeOtroInsumo,
+  onBlurOtrosInsumos,
+  onEliminarOtroInsumo,
+  onAgregarHerramienta,
+  onChangeHerramienta,
+  onBlurHerramienta,
   onChangeObservaciones,
   onFirmaChange,
   onCerrarTurno,
@@ -30,18 +68,19 @@ export function AditivosCierre({
   const turnoActivo = turno.estado === "iniciado";
   const firmado = !!turno.firmaDataURL;
   const hayInsumos = turno.insumos.length > 0;
+  const hayOtrosInsumos = turno.otrosInsumos.length > 0;
 
   const puedeCerrar =
     turnoActivo && firmado && turno.operador.trim() !== "";
 
   return (
     <div className="space-y-4">
-      {/* Insumos consumidos */}
+      {/* Bloque 1: Aditivos */}
       <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
             <Package className="w-5 h-5 text-emerald-400" />
-            Insumos Consumidos
+            Aditivos
           </h2>
           {turnoActivo && (
             <button
@@ -49,13 +88,13 @@ export function AditivosCierre({
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              Agregar Insumo
+              Agregar aditivos
             </button>
           )}
         </div>
 
         {hayInsumos ? (
-          <div className="max-h-[300px] overflow-y-auto overflow-x-auto scrollbar-thin">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700/60">
@@ -129,9 +168,135 @@ export function AditivosCierre({
           </div>
         ) : (
           <p className="text-sm text-slate-500 py-4 text-center">
-            No se han registrado insumos. Disponible durante todo el turno.
+            No se han registrado aditivos. Disponible durante todo el turno.
           </p>
         )}
+      </section>
+
+      {/* Bloque 2: Diesel cargado */}
+      <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
+        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-3">
+          <Fuel className="w-5 h-5 text-amber-400" />
+          Diesel cargado
+        </h2>
+        <div className="max-w-xs">
+          <span className="campo-label">Litros</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={turno.dieselLitros ?? ""}
+            onChange={(e) => onChangeDiesel(e.target.value === "" ? null : Number(e.target.value))}
+            disabled={turnoCerrado}
+            min={0}
+            step="0.1"
+            placeholder="0"
+            className="campo-input text-lg font-bold"
+          />
+        </div>
+      </section>
+
+      {/* Bloque 3: Otros insumos */}
+      <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <Boxes className="w-5 h-5 text-sky-400" />
+            Otros insumos
+          </h2>
+          {turnoActivo && (
+            <button
+              onClick={onAgregarOtroInsumo}
+              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 hover:bg-sky-500 px-4 py-2.5 text-sm font-bold text-white transition active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar fila
+            </button>
+          )}
+        </div>
+
+        {hayOtrosInsumos ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-700/60">
+                  <th className="px-3 py-2 w-28">Cantidad</th>
+                  <th className="px-3 py-2">Descripción</th>
+                  <th className="px-3 py-2 w-12"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {turno.otrosInsumos.map((o) => (
+                  <tr key={o.id} className="border-b border-slate-700/40">
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        value={o.cantidad ?? ""}
+                        onChange={(e) =>
+                          onChangeOtroInsumo(o.id, {
+                            cantidad: e.target.value === "" ? null : Number(e.target.value),
+                          })
+                        }
+                        onBlur={onBlurOtrosInsumos}
+                        disabled={turnoCerrado}
+                        min={0}
+                        step="0.01"
+                        placeholder="0"
+                        className="w-24 rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-base font-bold text-slate-100 outline-none focus:border-sky-500 disabled:cursor-not-allowed disabled:bg-slate-900/40 disabled:text-slate-400"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={o.descripcion}
+                        onChange={(e) => onChangeOtroInsumo(o.id, { descripcion: e.target.value })}
+                        onBlur={onBlurOtrosInsumos}
+                        disabled={turnoCerrado}
+                        placeholder="Descripción..."
+                        className="w-full rounded-md border border-slate-600 bg-slate-900 px-3 py-2 text-base text-slate-100 outline-none focus:border-sky-500 disabled:cursor-not-allowed disabled:bg-slate-900/40 disabled:text-slate-400"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      {!turnoCerrado && (
+                        <button
+                          onClick={() => onEliminarOtroInsumo(o.id)}
+                          className="p-2 rounded-md text-slate-500 hover:text-red-300 hover:bg-red-500/10 transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 py-4 text-center">
+            Sin otros insumos registrados.
+          </p>
+        )}
+      </section>
+
+      {/* Herramientas en Pozo */}
+      <section className="rounded-xl border border-slate-700/70 bg-slate-800/60 p-5">
+        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2 mb-1">
+          <Wrench className="w-5 h-5 text-emerald-400" />
+          Herramientas en Pozo
+        </h2>
+        <p className="text-xs text-slate-500 mb-4">Heredadas del turno anterior</p>
+        <div className="space-y-5">
+          {HERRAMIENTA_ORDEN.map((tipo) => (
+            <TablaHerramienta
+              key={tipo}
+              tipo={tipo}
+              filas={turno.herramientas.filter((h) => h.tipo === tipo)}
+              turnoActivo={turnoActivo}
+              turnoCerrado={turnoCerrado}
+              onAgregar={() => onAgregarHerramienta(tipo)}
+              onChange={onChangeHerramienta}
+              onBlur={onBlurHerramienta}
+            />
+          ))}
+        </div>
       </section>
 
       {/* Observaciones */}
@@ -230,6 +395,183 @@ export function AditivosCierre({
             Un nuevo turno en blanco está disponible. Registra a la Pestaña 1 para comenzar.
           </p>
         </section>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Tabla por tipo de herramienta ---------- */
+function TablaHerramienta({
+  tipo,
+  filas,
+  turnoActivo,
+  turnoCerrado,
+  onAgregar,
+  onChange,
+  onBlur,
+}: {
+  tipo: HerramientaTipo;
+  filas: HerramientaFila[];
+  turnoActivo: boolean;
+  turnoCerrado: boolean;
+  onAgregar: () => void;
+  onChange: (id: string, patch: Partial<HerramientaFila>) => void;
+  onBlur: (id: string) => void;
+}) {
+  // Desde/Hasta son automáticos (con candado) para corona, escareador y
+  // zapata — solo el Tricono los captura manualmente.
+  const desdeHastaManual = tipo === "tricono";
+
+  return (
+    <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-slate-200">{HERRAMIENTA_LABELS[tipo]}</h3>
+        {turnoActivo && (
+          <button
+            onClick={onAgregar}
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs font-bold text-slate-100 transition active:scale-95"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Agregar fila
+          </button>
+        )}
+      </div>
+
+      {filas.length === 0 ? (
+        <p className="text-xs text-slate-500">Sin registros de {HERRAMIENTA_LABELS[tipo]} en este turno.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <th className="px-2 py-1">Diámetro</th>
+                <th className="px-2 py-1">Marca</th>
+                <th className="px-2 py-1">Serie</th>
+                <th className="px-2 py-1">Estado</th>
+                <th className="px-2 py-1">Desde</th>
+                <th className="px-2 py-1">Hasta</th>
+                <th className="px-2 py-1">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((h, idx) => {
+                const esUltimo = idx === filas.length - 1;
+                const editable = esUltimo && !turnoCerrado;
+                const total = h.hasta - h.desde;
+                return (
+                  <tr key={h.id} className="border-t border-slate-800">
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={h.diametro}
+                        onChange={(e) => onChange(h.id, { diametro: e.target.value })}
+                        onBlur={() => onBlur(h.id)}
+                        disabled={!editable}
+                        placeholder="Ej. HQ, NQ"
+                        className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                          editable
+                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                        }`}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={h.marca}
+                        onChange={(e) => onChange(h.id, { marca: e.target.value })}
+                        onBlur={() => onBlur(h.id)}
+                        disabled={!editable}
+                        placeholder="Marca"
+                        className={`w-24 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                          editable
+                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                        }`}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        value={h.serie}
+                        onChange={(e) => onChange(h.id, { serie: e.target.value })}
+                        onBlur={() => onBlur(h.id)}
+                        disabled={!editable}
+                        placeholder="Serie"
+                        className={`w-24 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                          editable
+                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                        }`}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <select
+                        value={h.estado}
+                        onChange={(e) => onChange(h.id, { estado: e.target.value as EstadoHerramienta })}
+                        disabled={!editable}
+                        className={`rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                          editable
+                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <option value="">—</option>
+                        {ESTADOS.map((e) => (
+                          <option key={e} value={e}>
+                            {e}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      {desdeHastaManual ? (
+                        <input
+                          type="number"
+                          value={h.desde}
+                          onChange={(e) => onChange(h.id, { desde: Number(e.target.value) })}
+                          onBlur={() => onBlur(h.id)}
+                          disabled={!editable}
+                          step="0.01"
+                          className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                            editable
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                          }`}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1 text-slate-400 font-bold">
+                          <Lock className="w-3 h-3 text-slate-600 shrink-0" />
+                          {h.desde.toFixed(2)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      {desdeHastaManual ? (
+                        <input
+                          type="number"
+                          value={h.hasta}
+                          onChange={(e) => onChange(h.id, { hasta: Number(e.target.value) })}
+                          onBlur={() => onBlur(h.id)}
+                          disabled={!editable}
+                          step="0.01"
+                          className={`w-20 rounded-md border px-2 py-1 font-semibold outline-none transition ${
+                            editable
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                          }`}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1 text-slate-400 font-bold">
+                          <Lock className="w-3 h-3 text-slate-600 shrink-0" />
+                          {h.hasta.toFixed(2)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5 font-black text-emerald-300">{total.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

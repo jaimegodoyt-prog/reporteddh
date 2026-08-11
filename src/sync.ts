@@ -166,7 +166,6 @@ function reporteRowUpdate(t: Turno) {
     casing_diametro: t.casingDiametro,
     casing_profundidad: t.casingProfundidad,
     diesel_litros: t.dieselLitros,
-    diesel_litros: t.dieselLitros,
     operador: t.operador,
     ayudante_1: t.ayudante1,
     ayudante_2: t.ayudante2,

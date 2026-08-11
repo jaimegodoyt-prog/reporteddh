@@ -1121,15 +1121,11 @@ export default function App() {
                   tramos={turno.tramos}
                   profundidadInicial={turno.profundidadInicial}
                   turnoActivo={turnoActivo}
-                  herramientas={turno.herramientas}
-                  historialHerramientas={turno.historialHerramientas}
-                  operador={turno.operador}
                   turnoCerrado={turnoCerrado}
                   onAgregar={agregarTramo}
                   onChangeTramo={cambiarTramo}
                   onBlurTramo={syncTramoOnBlur}
                   onEliminarTramo={eliminarTramo}
-                  onCambiarHerramienta={cambiarHerramienta}
                   barril={turno.barril}
                   muerto={turno.muerto}
                   onChangeBarrilMuerto={(patch) => patchTurno(patch)}

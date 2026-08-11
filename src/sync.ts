@@ -224,6 +224,30 @@ function insumoRow(i: Insumo, reporteId: string) {
   };
 }
 
+// TABLA 4b: turno_otros_insumos
+function otroInsumoRow(o: OtroInsumo, reporteId: string) {
+  return {
+    reporte_id: reporteId,
+    cantidad: o.cantidad,
+    descripcion: o.descripcion,
+  };
+}
+
+// TABLA 6: turno_herramientas
+function herramientaRow(h: HerramientaFila, reporteId: string) {
+  return {
+    reporte_id: reporteId,
+    tipo: h.tipo,
+    diametro: h.diametro,
+    marca: h.marca,
+    serie: h.serie,
+    estado: h.estado || null,
+    desde: h.desde,
+    hasta: h.hasta,
+    total: h.hasta - h.desde,
+  };
+}
+
 function errResult(error: unknown, ctx: string): SyncResult {
   const msg = error instanceof Error ? error.message : String(error);
   return { ok: false, error: `${ctx}: ${msg}` };

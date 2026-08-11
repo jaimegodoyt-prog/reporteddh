@@ -145,4 +145,135 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     pozo: "",
     orientacion: "",
     profundidadInicial,
-    programado:
+    programado: null,
+    casingDiametro: "",
+    casingProfundidad: null,
+    barril: null,
+    muerto: null,
+    casing: [],
+    inicializado: false,
+    operador: "",
+    ayudante1: "",
+    ayudante2: "",
+    ayudante3: "",
+    tramos: [],
+    herramientas: [],
+    historialRelevos: [],
+    bitacora: [],
+    insumos: [],
+    dieselLitros: null,
+    otrosInsumos: [],
+    observaciones: "",
+    firmaDataURL: null,
+    audit: [
+      { timestamp: ahora, accion: "turno_creado", detalle: "Turno creado localmente" },
+    ],
+    iniciadoEn: null,
+    cerradoEn: null,
+    cloudId: id,
+  };
+}
+
+export async function cargarTurnoActual(): Promise<Turno> {
+  // 1) localStorage primero — recuperación instantánea en la tablet
+  const desdeLS = cargarTurnoLocalStorage();
+  if (desdeLS && desdeLS.estado !== "cerrado") {
+    const turno = normalizarTurno(desdeLS);
+    getDB()
+      .then((db) => db.put("turnos", turno))
+      .catch(() => {});
+    return turno;
+  }
+
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  const abiertos = todos.filter((t) => t.estado !== "cerrado");
+  if (abiertos.length > 0) {
+    const turno = normalizarTurno(abiertos.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0]);
+    guardarTurnoLocalStorage(turno);
+    return turno;
+  }
+  // Crear nuevo heredando profundidad inicial del último cerrado
+  const cerrados = todos.filter((t) => t.estado === "cerrado");
+  let profundidadInicial: number | null = null;
+  if (cerrados.length > 0) {
+    const ultimo = cerrados.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0];
+    const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
+    if (ultimoTramo) {
+      profundidadInicial = ultimoTramo.fondo;
+    }
+  }
+  const nuevo = crearTurnoNuevo(profundidadInicial);
+  guardarTurnoLocalStorage(nuevo);
+  await db.put("turnos", nuevo);
+  return nuevo;
+}
+
+export async function guardarTurno(turno: Turno): Promise<void> {
+  guardarTurnoLocalStorage(turno);
+  const db = await getDB();
+  await db.put("turnos", turno);
+}
+
+export function pushAudit(turno: Turno, accion: string, detalle: string): Turno {
+  const entry: AuditEntry = { timestamp: ahoraISO(), accion, detalle };
+  return { ...turno, audit: [...turno.audit, entry] };
+}
+
+export async function cerrarTurno(turno: Turno): Promise<Turno> {
+  const conAudit = pushAudit(turno, "turno_cerrado", "Reporte inmutable generado");
+  const cerrado: Turno = {
+    ...conAudit,
+    estado: "cerrado",
+    cerradoEn: ahoraISO(),
+  };
+  await guardarTurno(cerrado);
+  return cerrado;
+}
+
+export async function contarTurnosCerrados(): Promise<number> {
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  return todos.filter((t) => t.estado === "cerrado").length;
+}
+
+/**
+ * Busca en el historial local de la tablet (todos los turnos ya guardados en
+ * este dispositivo, sin necesidad de señal) los últimos turnos que
+ * trabajaron el mismo número de pozo. Se usa para autocompletar datos al
+ * iniciar un turno nuevo sobre un pozo ya conocido por esta tablet.
+ */
+export async function buscarUltimosTurnosPorPozo(
+  pozo: string,
+  cantidad: number = 2,
+): Promise<Turno[]> {
+  const pozoNorm = pozo.trim().toLowerCase();
+  if (!pozoNorm) return [];
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  return todos
+    .filter((t) => t.pozo.trim().toLowerCase() === pozoNorm && t.estado !== "borrador")
+    .sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0))
+    .slice(0, cantidad)
+    .map(normalizarTurno);
+}
+
+/**
+ * Busca en el historial local de la tablet la última fila registrada de un
+ * tipo de herramienta (Corona, Escareador, Zapata o Tricono), sin importar
+ * el pozo — la herramienta se mueve con el equipo, no con el pozo.
+ */
+export async function buscarUltimaHerramientaPorTipo(
+  tipo: HerramientaTipo,
+): Promise<HerramientaFila | null> {
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  let ultima: HerramientaFila | null = null;
+  for (const t of todos) {
+    for (const h of t.herramientas ?? []) {
+      if (h.tipo !== tipo) continue;
+      if (!ultima || h.creadoEn > ultima.creadoEn) ultima = h;
+    }
+  }
+  return ultima;
+}

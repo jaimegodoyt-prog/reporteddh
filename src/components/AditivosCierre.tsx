@@ -31,6 +31,7 @@ interface Props {
   onBlurInsumos: () => void;
   onEliminarInsumo: (id: string) => void;
   onChangeDiesel: (v: number | null) => void;
+  onChangeHorometroFinal: (v: number | null) => void;
   onAgregarOtroInsumo: () => void;
   onChangeOtroInsumo: (id: string, patch: Partial<OtroInsumo>) => void;
   onBlurOtrosInsumos: () => void;

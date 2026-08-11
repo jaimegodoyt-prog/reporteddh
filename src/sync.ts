@@ -81,6 +81,17 @@ export async function reintentarCola(): Promise<{ ok: number; fallidos: number }
       }
     } else if (item.tipo === "casing") {
       r = await syncCasingDirecto(item.payload as CasingRow, item.turnoId);
+    } else if (item.tipo === "otrosinsumos") {
+      const payload = item.payload;
+      if (payload && typeof payload === "object" && "_delete" in (payload as object)) {
+        r = await deleteOtroInsumoDirecto((payload as { id: string }).id);
+      } else if (payload && typeof payload === "object" && "otrosInsumos" in (payload as Turno)) {
+        r = await syncOtrosInsumosDirecto(payload as Turno);
+      } else {
+        r = await syncOtroInsumoDirecto(payload as OtroInsumo, item.turnoId);
+      }
+    } else if (item.tipo === "herramientas") {
+      r = await syncHerramientaDirecto(item.payload as HerramientaFila, item.turnoId);
     } else {
       r = { ok: false, error: "tipo de cola desconocido" };
     }

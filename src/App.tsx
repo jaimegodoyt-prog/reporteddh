@@ -5,15 +5,26 @@ import type {
   Tramo,
   CasingRow,
   HerramientaTipo,
+  HerramientaFila,
   ActividadBitacora,
   Insumo,
+  OtroInsumo,
 } from "@/types";
-import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit, buscarUltimosTurnosPorPozo } from "@/db";
+import {
+  cargarTurnoActual,
+  guardarTurno,
+  cerrarTurno as cerrarEnDB,
+  pushAudit,
+  buscarUltimosTurnosPorPozo,
+  buscarUltimaHerramientaPorTipo,
+} from "@/db";
 import {
   uid,
   ahoraISO,
   fechaHora,
   horaActualLocal,
+  horaDeISO,
+  HERRAMIENTAS_INICIALES,
 } from "@/config";
 import {
   insertReporteCloud,

@@ -87,9 +87,9 @@ export function ControlTramos({
   const totalHerramienta = barras + (barril ?? 0) - (muerto ?? 0);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:h-full">
+    <div className="flex flex-col gap-4">
       {/* Tabla de tramos - protagonista */}
-      <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60 overflow-hidden">
+      <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60">
         {/* Banner verde gigante */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 flex items-center justify-between shadow-lg shrink-0">
           <div className="flex items-center gap-3">
@@ -109,8 +109,248 @@ export function ControlTramos({
           </div>
         </div>
 
-        {/* Sección Casing */}
+        {/* Encabezado: Cálculo de herramienta */}
         <div className="border-b border-slate-700/60 bg-slate-900/40 px-4 py-3 shrink-0">
+          <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-2">
+            <Gauge className="w-4 h-4 text-amber-400" />
+            Cálculo de herramienta
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <span className="campo-label">Barril (m)</span>
+              <input
+                type="number"
+                value={barril ?? ""}
+                onChange={(e) =>
+                  onChangeBarrilMuerto({
+                    barril: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                step="0.01"
+                placeholder="Ej. 4.15"
+                className="campo-input"
+                disabled={turnoCerrado}
+              />
+            </div>
+            <div>
+              <span className="campo-label">Muerto (m)</span>
+              <input
+                type="number"
+                value={muerto ?? ""}
+                onChange={(e) =>
+                  onChangeBarrilMuerto({
+                    muerto: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                step="0.01"
+                placeholder="Ej. 1.20"
+                className="campo-input"
+                disabled={turnoCerrado}
+              />
+            </div>
+            <div>
+              <span className="campo-label">Barras (m)</span>
+              <div className="campo-bloqueado">
+                <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                <span className="font-bold text-slate-200">{barras.toFixed(2)}</span>
+              </div>
+            </div>
+            <div>
+              <span className="campo-label">Total de herramienta (m)</span>
+              <div className="campo-bloqueado border-amber-500/40">
+                <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="font-bold text-amber-300">{totalHerramienta.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          {tramos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-slate-400" />
+              </div>
+              <p className="text-slate-300 font-semibold text-lg">No hay tramos registrados</p>
+              <p className="text-slate-500 text-sm mt-1 max-w-sm">
+                Presiona "Agregar Siguiente Tramo" para comenzar a registrar el avance del pozo.
+                {" "}El primer tramo iniciará con Hta. desde {primerTramoHtaDesde.toFixed(2)} m.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900/80">
+                <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <th className="px-3 py-3 w-10">N°</th>
+                  <th className="px-3 py-3">Hta. desde</th>
+                  <th className="px-3 py-3">Agrega</th>
+                  <th className="px-3 py-3">Total Hta.</th>
+                  <th className="px-3 py-3">Fondo</th>
+                  <th className="px-3 py-3">Resta</th>
+                  <th className="px-3 py-3">Perf.</th>
+                  <th className="px-3 py-3">Rec. %</th>
+                  <th className="px-3 py-3">Tipo de roca</th>
+                  <th className="px-3 py-3 w-12"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {tramos.map((tramo, idx) => {
+                  const esUltimo = idx === tramos.length - 1;
+                  return (
+                    <tr
+                      key={tramo.id}
+                      className={`border-t border-slate-700/50 ${esUltimo ? "bg-emerald-500/5" : ""}`}
+                    >
+                      <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-1.5 text-slate-400 font-bold">
+                          <Lock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                          {tramo.htaDesde.toFixed(2)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={tramo.agrega ?? ""}
+                          onChange={(e) =>
+                            onChangeTramo(tramo.id, {
+                              agrega: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          onBlur={() => onBlurTramo(tramo.id)}
+                          disabled={!esUltimo}
+                          step="0.01"
+                          className={`w-20 rounded-md border px-2 py-2 text-base font-bold outline-none transition ${
+                            esUltimo
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-300 cursor-not-allowed"
+                          }`}
+                          placeholder="0"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="font-black text-base text-sky-300">
+                          {tramo.totalHta.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="font-black text-base text-emerald-300">
+                          {tramo.fondo.toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={tramo.resta ?? ""}
+                          onChange={(e) =>
+                            onChangeTramo(tramo.id, {
+                              resta: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                          onBlur={() => onBlurTramo(tramo.id)}
+                          disabled={!esUltimo}
+                          step="0.01"
+                          className={`w-20 rounded-md border px-2 py-2 text-base font-semibold outline-none transition ${
+                            esUltimo
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                          }`}
+                          placeholder="—"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`font-black text-base ${
+                            tramo.perf != null ? "text-amber-300" : "text-slate-600"
+                          }`}
+                        >
+                          {tramo.perf != null ? tramo.perf.toFixed(2) : "—"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={tramo.recuperacion ?? ""}
+                          onChange={(e) =>
+                            onChangeTramo(tramo.id, {
+                              recuperacion:
+                                e.target.value === ""
+                                  ? null
+                                  : Math.min(100, Math.max(0, Number(e.target.value))),
+                            })
+                          }
+                          onBlur={() => onBlurTramo(tramo.id)}
+                          disabled={!esUltimo}
+                          min={0}
+                          max={100}
+                          step="0.1"
+                          className={`w-20 rounded-md border px-2 py-2 text-base font-semibold outline-none transition ${
+                            esUltimo
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                          }`}
+                          placeholder="—"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={tramo.tipoRoca}
+                          onChange={(e) =>
+                            onChangeTramo(tramo.id, { tipoRoca: e.target.value as TipoRoca })
+                          }
+                          disabled={!esUltimo}
+                          className={`rounded-md border px-2 py-2 text-sm font-semibold outline-none transition ${
+                            esUltimo
+                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
+                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          <option value="">—</option>
+                          {OPCIONES_ROCA.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        {esUltimo && (
+                          <button
+                            onClick={() => onEliminarTramo(tramo.id)}
+                            className="p-2 rounded-md text-slate-500 hover:text-red-300 hover:bg-red-500/10 transition"
+                            title="Eliminar tramo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {turnoActivo && (
+          <div className="border-t border-slate-700/60 p-4 bg-slate-900/40 shrink-0">
+            <button
+              onClick={onAgregar}
+              className="btn-grande bg-emerald-600 hover:bg-emerald-500 text-white w-full text-lg"
+            >
+              <Plus className="w-6 h-6" />
+              Agregar Siguiente Tramo
+            </button>
+            <p className="text-xs text-slate-500 mt-2 text-center">
+              {tramos.length === 0
+                ? `El primer tramo iniciará con Hta. desde ${primerTramoHtaDesde.toFixed(2)} m`
+                : `Próximo tramo iniciará con Hta. desde ${tramos[tramos.length - 1].totalHta.toFixed(2)} m`}
+            </p>
+          </div>
+        )}
+
+        {/* Sección Casing - debajo del control de tramos */}
+        <div className="border-t-4 border-slate-950 bg-slate-900/40 px-4 py-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
               <Layers className="w-4 h-4 text-sky-400" />
@@ -129,7 +369,7 @@ export function ControlTramos({
           {casing.length === 0 ? (
             <p className="text-xs text-slate-500">Sin registros de Casing en este turno.</p>
           ) : (
-            <div className="overflow-auto scrollbar-thin">
+            <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -193,258 +433,10 @@ export function ControlTramos({
             </div>
           )}
         </div>
-
-        {/* Encabezado: Cálculo de herramienta */}
-        <div className="border-b border-slate-700/60 bg-slate-900/40 px-4 py-3 shrink-0">
-          <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 mb-2">
-            <Gauge className="w-4 h-4 text-amber-400" />
-            Cálculo de herramienta
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <span className="campo-label">Barril (m)</span>
-              <input
-                type="number"
-                value={barril ?? ""}
-                onChange={(e) =>
-                  onChangeBarrilMuerto({
-                    barril: e.target.value === "" ? null : Number(e.target.value),
-                  })
-                }
-                step="0.01"
-                placeholder="Ej. 4.15"
-                className="campo-input"
-                disabled={turnoCerrado}
-              />
-            </div>
-            <div>
-              <span className="campo-label">Muerto (m)</span>
-              <input
-                type="number"
-                value={muerto ?? ""}
-                onChange={(e) =>
-                  onChangeBarrilMuerto({
-                    muerto: e.target.value === "" ? null : Number(e.target.value),
-                  })
-                }
-                step="0.01"
-                placeholder="Ej. 1.20"
-                className="campo-input"
-                disabled={turnoCerrado}
-              />
-            </div>
-            <div>
-              <span className="campo-label">Barras (m)</span>
-              <div className="campo-bloqueado">
-                <Lock className="w-4 h-4 text-slate-500 shrink-0" />
-                <span className="font-bold text-slate-200">{barras.toFixed(2)}</span>
-              </div>
-            </div>
-            <div>
-              <span className="campo-label">Total de herramienta (m)</span>
-              <div className="campo-bloqueado border-amber-500/40">
-                <Lock className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="font-bold text-amber-300">{totalHerramienta.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto scrollbar-thin">
-          {tramos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6">
-              <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
-                <Plus className="w-8 h-8 text-slate-400" />
-              </div>
-              <p className="text-slate-300 font-semibold text-lg">No hay tramos registrados</p>
-              <p className="text-slate-500 text-sm mt-1 max-w-sm">
-                Presiona "Agregar Siguiente Tramo" para comenzar a registrar el avance del pozo.
-                {" "}El primer tramo iniciará con Hta. desde {primerTramoHtaDesde.toFixed(2)} m.
-              </p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900/80 sticky top-0 z-10">
-                <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-3 py-3 w-10">N°</th>
-                  <th className="px-3 py-3">Hta. desde</th>
-                  <th className="px-3 py-3">Agrega</th>
-                  <th className="px-3 py-3">Total Hta.</th>
-                  <th className="px-3 py-3">Fondo</th>
-                  <th className="px-3 py-3">Resta</th>
-                  <th className="px-3 py-3">Perf.</th>
-                  <th className="px-3 py-3">Rec. %</th>
-                  <th className="px-3 py-3">Tipo de roca</th>
-                  <th className="px-3 py-3 w-12"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {tramos.map((tramo, idx) => {
-                  const esUltimo = idx === tramos.length - 1;
-                  return (
-                    <tr
-                      key={tramo.id}
-                      className={`border-t border-slate-700/50 ${esUltimo ? "bg-emerald-500/5" : ""}`}
-                    >
-                      <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
-                      {/* Hta. desde - bloqueado */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5 text-slate-400 font-bold">
-                          <Lock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                          {tramo.htaDesde.toFixed(2)}
-                        </div>
-                      </td>
-                      {/* Agrega */}
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={tramo.agrega ?? ""}
-                          onChange={(e) =>
-                            onChangeTramo(tramo.id, {
-                              agrega: e.target.value === "" ? null : Number(e.target.value),
-                            })
-                          }
-                          onBlur={() => onBlurTramo(tramo.id)}
-                          disabled={!esUltimo}
-                          step="0.01"
-                          className={`w-20 rounded-md border px-2 py-2 text-base font-bold outline-none transition ${
-                            esUltimo
-                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                              : "border-slate-700/50 bg-slate-900/40 text-slate-300 cursor-not-allowed"
-                          }`}
-                          placeholder="0"
-                        />
-                      </td>
-                      {/* Total Hta. - auto */}
-                      <td className="px-3 py-2">
-                        <span className="font-black text-base text-sky-300">
-                          {tramo.totalHta.toFixed(2)}
-                        </span>
-                      </td>
-                      {/* Fondo - auto */}
-                      <td className="px-3 py-2">
-                        <span className="font-black text-base text-emerald-300">
-                          {tramo.fondo.toFixed(2)}
-                        </span>
-                      </td>
-                      {/* Resta */}
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={tramo.resta ?? ""}
-                          onChange={(e) =>
-                            onChangeTramo(tramo.id, {
-                              resta: e.target.value === "" ? null : Number(e.target.value),
-                            })
-                          }
-                          onBlur={() => onBlurTramo(tramo.id)}
-                          disabled={!esUltimo}
-                          step="0.01"
-                          className={`w-20 rounded-md border px-2 py-2 text-base font-semibold outline-none transition ${
-                            esUltimo
-                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                          }`}
-                          placeholder="—"
-                        />
-                      </td>
-                      {/* Perf. - auto */}
-                      <td className="px-3 py-2">
-                        <span
-                          className={`font-black text-base ${
-                            tramo.perf != null ? "text-amber-300" : "text-slate-600"
-                          }`}
-                        >
-                          {tramo.perf != null ? tramo.perf.toFixed(2) : "—"}
-                        </span>
-                      </td>
-                      {/* Recuperación */}
-                      <td className="px-3 py-2">
-                        <input
-                          type="number"
-                          value={tramo.recuperacion ?? ""}
-                          onChange={(e) =>
-                            onChangeTramo(tramo.id, {
-                              recuperacion:
-                                e.target.value === ""
-                                  ? null
-                                  : Math.min(100, Math.max(0, Number(e.target.value))),
-                            })
-                          }
-                          onBlur={() => onBlurTramo(tramo.id)}
-                          disabled={!esUltimo}
-                          min={0}
-                          max={100}
-                          step="0.1"
-                          className={`w-20 rounded-md border px-2 py-2 text-base font-semibold outline-none transition ${
-                            esUltimo
-                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30"
-                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                          }`}
-                          placeholder="—"
-                        />
-                      </td>
-                      {/* Tipo de roca */}
-                      <td className="px-3 py-2">
-                        <select
-                          value={tramo.tipoRoca}
-                          onChange={(e) =>
-                            onChangeTramo(tramo.id, { tipoRoca: e.target.value as TipoRoca })
-                          }
-                          disabled={!esUltimo}
-                          className={`rounded-md border px-2 py-2 text-sm font-semibold outline-none transition ${
-                            esUltimo
-                              ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-emerald-500"
-                              : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          <option value="">—</option>
-                          {OPCIONES_ROCA.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-2">
-                        {esUltimo && (
-                          <button
-                            onClick={() => onEliminarTramo(tramo.id)}
-                            className="p-2 rounded-md text-slate-500 hover:text-red-300 hover:bg-red-500/10 transition"
-                            title="Eliminar tramo"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {turnoActivo && (
-          <div className="border-t border-slate-700/60 p-4 bg-slate-900/40 shrink-0">
-            <button
-              onClick={onAgregar}
-              className="btn-grande bg-emerald-600 hover:bg-emerald-500 text-white w-full text-lg"
-            >
-              <Plus className="w-6 h-6" />
-              Agregar Siguiente Tramo
-            </button>
-            <p className="text-xs text-slate-500 mt-2 text-center">
-              {tramos.length === 0
-                ? `El primer tramo iniciará con Hta. desde ${primerTramoHtaDesde.toFixed(2)} m`
-                : `Próximo tramo iniciará con Hta. desde ${tramos[tramos.length - 1].totalHta.toFixed(2)} m`}
-            </p>
-          </div>
-        )}
       </section>
 
       {/* Panel lateral de herramientas */}
-      <aside className="lg:w-[340px] shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
+      <aside className="shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
             <Wrench className="w-5 h-5 text-emerald-400" />

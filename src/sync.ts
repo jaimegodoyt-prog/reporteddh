@@ -688,21 +688,47 @@ export async function autoSyncTurno(
     return syncInsumos(turno);
   }
 
+  if (scope === "otrosinsumos") {
+    if (entityId) {
+      const o = turno.otrosInsumos.find((x) => x.id === entityId);
+      if (o) return syncOtroInsumo(o, rid);
+      return deleteOtroInsumoCloud(entityId, rid);
+    }
+    return syncOtrosInsumos(turno);
+  }
+
+  if (scope === "herramientas") {
+    if (entityId) {
+      const h = turno.herramientas.find((x) => x.id === entityId);
+      if (h) {
+        const rH = await syncHerramienta(h, rid);
+        const rReporte = await syncReporte(turno);
+        if (!rH.ok && !rH.offline) return rH;
+        if (!rReporte.ok && !rReporte.offline) return rReporte;
+        return { ok: true, error: null, offline: !!(rH.offline || rReporte.offline) };
+      }
+    }
+    return syncHerramientas(turno);
+  }
+
   return syncTodo(turno);
 }
 
-// Sync completo (tramos + bitacora + insumos + reporte)
+// Sync completo (tramos + casing + bitacora + insumos + otros insumos + herramientas + reporte)
 export async function syncTodo(turno: Turno): Promise<SyncResult> {
-  const [r, t, c, b, i] = await Promise.all([
+  const [r, t, c, b, i, oi, h] = await Promise.all([
     syncReporte(turno),
     syncTramos(turno),
     syncCasingRows(turno),
     syncBitacora(turno),
     syncInsumos(turno),
+    syncOtrosInsumos(turno),
+    syncHerramientas(turno),
   ]);
-  const allOffline = [r, t, c, b, i].every((x) => x.offline);
+  const todos = [r, t, c, b, i, oi, h];
+  const allOffline = todos.every((x) => x.offline);
   if (allOffline) return { ok: true, error: null, offline: true };
-  const failed = [r, t, c, b, i].find((x) => !x.ok && !x.offline);
+  const failed = todos.find((x) => !x.ok && !x.offline);
   if (failed) return failed;
   return { ok: true, error: null };
 }

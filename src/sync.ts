@@ -149,6 +149,8 @@ function reporteRowInicial(t: Turno) {
     casing_diametro: t.casingDiametro,
     casing_profundidad: t.casingProfundidad,
     diesel_litros: t.dieselLitros,
+    horometro_inicial: t.horometroInicial,
+    horometro_final: t.horometroFinal,
     operador: t.operador,
     ayudante_1: t.ayudante1,
     ayudante_2: t.ayudante2,

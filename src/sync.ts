@@ -265,6 +265,54 @@ async function syncCasingDirecto(fila: CasingRow, reporteId: string): Promise<Sy
     return errResult(e, "upsert turno_casing");
   }
 }
+async function syncOtroInsumoDirecto(o: OtroInsumo, reporteId: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase
+      .from("turno_otros_insumos")
+      .upsert({ ...otroInsumoRow(o, reporteId), id: o.id });
+    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    return errResult(e, "upsert turno_otros_insumos");
+  }
+}
+
+async function deleteOtroInsumoDirecto(id: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase.from("turno_otros_insumos").delete().eq("id", id);
+    if (error) return { ok: false, error: `delete turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    return errResult(e, "delete turno_otros_insumos");
+  }
+}
+
+async function syncOtrosInsumosDirecto(turno: Turno): Promise<SyncResult> {
+  try {
+    const rid = turno.cloudId ?? turno.id;
+    const { error: delErr } = await supabase.from("turno_otros_insumos").delete().eq("reporte_id", rid);
+    if (delErr) return { ok: false, error: `delete turno_otros_insumos: ${delErr.message}` };
+    if (turno.otrosInsumos.length === 0) return { ok: true, error: null };
+    const rows = turno.otrosInsumos.map((o) => ({ ...otroInsumoRow(o, rid), id: o.id }));
+    const { error } = await supabase.from("turno_otros_insumos").upsert(rows);
+    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    return errResult(e, "upsert turno_otros_insumos");
+  }
+}
+
+async function syncHerramientaDirecto(h: HerramientaFila, reporteId: string): Promise<SyncResult> {
+  try {
+    const { error } = await supabase
+      .from("turno_herramientas")
+      .upsert({ ...herramientaRow(h, reporteId), id: h.id });
+    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
+    return { ok: true, error: null };
+  } catch (e) {
+    return errResult(e, "upsert turno_herramientas");
+  }
+}
 
 async function syncActividadDirecto(act: ActividadBitacora, reporteId: string): Promise<SyncResult> {
   try {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Plus, Trash2, Clock, Search, BookOpen } from "lucide-react";
-import type { ActividadBitacora, CargoHora } from "@/types";
+import type { ActividadBitacora } from "@/types";
 import { CODIGOS_OPERACION, codigoCompleto, diffHoras, horaActualLocal } from "@/config";
 
 interface Props {
@@ -25,15 +25,8 @@ export function BitacoraTiempos({
     return acc + (h ?? 0);
   }, 0);
 
-  const horasPropia = bitacora
-    .filter((a) => a.cargoHora === "propia")
-    .reduce((acc, a) => acc + (diffHoras(a.horaDesde, a.horaHasta) ?? 0), 0);
-  const horasCliente = bitacora
-    .filter((a) => a.cargoHora === "cliente")
-    .reduce((acc, a) => acc + (diffHoras(a.horaDesde, a.horaHasta) ?? 0), 0);
-
   return (
-    <div className="flex flex-col h-full rounded-xl border border-slate-700/70 bg-slate-800/60 overflow-hidden">
+    <div className="flex flex-col rounded-xl border border-slate-700/70 bg-slate-800/60">
       {/* Header con totales */}
       <div className="bg-gradient-to-r from-sky-700 to-sky-600 px-6 py-4 flex items-center justify-between shadow-lg shrink-0">
         <div className="flex items-center gap-3">
@@ -47,19 +40,11 @@ export function BitacoraTiempos({
             </p>
           </div>
         </div>
-        <div className="text-right text-xs font-bold text-sky-50/90 space-y-0.5">
-          <p>
-            Propia: <span className="text-white">{horasPropia.toFixed(2)} h</span>
-          </p>
-          <p>
-            Cliente: <span className="text-white">{horasCliente.toFixed(2)} h</span>
-          </p>
-        </div>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin">
+      <div className="overflow-x-auto">
         {bitacora.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-6">
             <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
               <BookOpen className="w-8 h-8 text-slate-400" />
             </div>
@@ -70,14 +55,13 @@ export function BitacoraTiempos({
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-slate-900/80 sticky top-0 z-10">
+            <thead className="bg-slate-900/80">
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
                 <th className="px-3 py-3">Hora Desde</th>
                 <th className="px-3 py-3">Hora Hasta</th>
                 <th className="px-3 py-3">Total Horas</th>
                 <th className="px-3 py-3 min-w-[200px]">Código de Operación</th>
                 <th className="px-3 py-3">Detalle / Observación</th>
-                <th className="px-3 py-3">Cargo Hora</th>
                 <th className="px-3 py-3 w-12"></th>
               </tr>
             </thead>
@@ -150,13 +134,6 @@ export function BitacoraTiempos({
                             ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500"
                             : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
                         }`}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <CargoSwitch
-                        value={act.cargoHora}
-                        disabled={!esUltimo}
-                        onChange={(v) => onChange(act.id, { cargoHora: v })}
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -311,51 +288,6 @@ function CodigoAutocomplete({
           Sin resultados para "{value}"
         </div>
       )}
-    </div>
-  );
-}
-
-/* ---------- Switch Propia / Cliente ---------- */
-
-function CargoSwitch({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: CargoHora;
-  disabled?: boolean;
-  onChange: (v: CargoHora) => void;
-}) {
-  return (
-    <div
-      className={`inline-flex rounded-lg border overflow-hidden ${
-        disabled ? "opacity-60 cursor-not-allowed" : ""
-      }`}
-    >
-      <button
-        type="button"
-        onClick={() => onChange("propia")}
-        disabled={disabled}
-        className={`px-3 py-2 text-xs font-bold transition ${
-          value === "propia"
-            ? "bg-emerald-600 text-white"
-            : "bg-slate-800 text-slate-400 hover:text-slate-200"
-        }`}
-      >
-        Propia
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("cliente")}
-        disabled={disabled}
-        className={`px-3 py-2 text-xs font-bold transition ${
-          value === "cliente"
-            ? "bg-amber-600 text-white"
-            : "bg-slate-800 text-slate-400 hover:text-slate-200"
-        }`}
-      >
-        Cliente
-      </button>
     </div>
   );
 }

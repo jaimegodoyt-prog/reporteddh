@@ -1,5 +1,5 @@
 import { supabase, getSupabaseConfigError } from "@/supabaseClient";
-import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo, OtroInsumo, HerramientaFila } from "@/types";
+import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo } from "@/types";
 
 export type SyncResult = {
   ok: boolean;
@@ -13,7 +13,7 @@ const COLA_KEY = "diamantina_cola_sync";
 
 type ItemCola = {
   id: string;
-  tipo: "reporte" | "tramo" | "bitacora" | "insumos" | "casing" | "otrosinsumos" | "herramientas";
+  tipo: "reporte" | "tramo" | "bitacora" | "insumos" | "casing";
   turnoId: string;
   payload: unknown;
   orden?: number;
@@ -81,17 +81,6 @@ export async function reintentarCola(): Promise<{ ok: number; fallidos: number }
       }
     } else if (item.tipo === "casing") {
       r = await syncCasingDirecto(item.payload as CasingRow, item.turnoId);
-    } else if (item.tipo === "otrosinsumos") {
-      const payload = item.payload;
-      if (payload && typeof payload === "object" && "_delete" in (payload as object)) {
-        r = await deleteOtroInsumoDirecto((payload as { id: string }).id);
-      } else if (payload && typeof payload === "object" && "otrosInsumos" in (payload as Turno)) {
-        r = await syncOtrosInsumosDirecto(payload as Turno);
-      } else {
-        r = await syncOtroInsumoDirecto(payload as OtroInsumo, item.turnoId);
-      }
-    } else if (item.tipo === "herramientas") {
-      r = await syncHerramientaDirecto(item.payload as HerramientaFila, item.turnoId);
     } else {
       r = { ok: false, error: "tipo de cola desconocido" };
     }
@@ -148,9 +137,6 @@ function reporteRowInicial(t: Turno) {
     programado: t.programado,
     casing_diametro: t.casingDiametro,
     casing_profundidad: t.casingProfundidad,
-    diesel_litros: t.dieselLitros,
-    horometro_inicial: t.horometroInicial,
-    horometro_final: t.horometroFinal,
     operador: t.operador,
     ayudante_1: t.ayudante1,
     ayudante_2: t.ayudante2,
@@ -161,7 +147,7 @@ function reporteRowInicial(t: Turno) {
 
 function profundidadFinalTurno(t: Turno): number | null {
   const ultimo = t.tramos[t.tramos.length - 1];
-  return ultimo?.fondo ?? t.profundidadInicial;
+  return ultimo?.hasta ?? t.profundidadInicial;
 }
 
 // Para upsert/update posterior (mismos campos base, puede incluir estado y cerrado_el)
@@ -178,9 +164,6 @@ function reporteRowUpdate(t: Turno) {
     programado: t.programado,
     casing_diametro: t.casingDiametro,
     casing_profundidad: t.casingProfundidad,
-    diesel_litros: t.dieselLitros,
-    horometro_inicial: t.horometroInicial,
-    horometro_final: t.horometroFinal,
     operador: t.operador,
     ayudante_1: t.ayudante1,
     ayudante_2: t.ayudante2,
@@ -239,30 +222,6 @@ function insumoRow(i: Insumo, reporteId: string) {
   };
 }
 
-// TABLA 4b: turno_otros_insumos
-function otroInsumoRow(o: OtroInsumo, reporteId: string) {
-  return {
-    reporte_id: reporteId,
-    cantidad: o.cantidad,
-    descripcion: o.descripcion,
-  };
-}
-
-// TABLA 6: turno_herramientas
-function herramientaRow(h: HerramientaFila, reporteId: string) {
-  return {
-    reporte_id: reporteId,
-    tipo: h.tipo,
-    diametro: h.diametro,
-    marca: h.marca,
-    serie: h.serie,
-    estado: h.estado || null,
-    desde: h.desde,
-    hasta: h.hasta,
-    total: h.hasta - h.desde,
-  };
-}
-
 function errResult(error: unknown, ctx: string): SyncResult {
   const msg = error instanceof Error ? error.message : String(error);
   return { ok: false, error: `${ctx}: ${msg}` };
@@ -302,54 +261,6 @@ async function syncCasingDirecto(fila: CasingRow, reporteId: string): Promise<Sy
     return { ok: true, error: null };
   } catch (e) {
     return errResult(e, "upsert turno_casing");
-  }
-}
-async function syncOtroInsumoDirecto(o: OtroInsumo, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_otros_insumos")
-      .upsert({ ...otroInsumoRow(o, reporteId), id: o.id });
-    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    return errResult(e, "upsert turno_otros_insumos");
-  }
-}
-
-async function deleteOtroInsumoDirecto(id: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase.from("turno_otros_insumos").delete().eq("id", id);
-    if (error) return { ok: false, error: `delete turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    return errResult(e, "delete turno_otros_insumos");
-  }
-}
-
-async function syncOtrosInsumosDirecto(turno: Turno): Promise<SyncResult> {
-  try {
-    const rid = turno.cloudId ?? turno.id;
-    const { error: delErr } = await supabase.from("turno_otros_insumos").delete().eq("reporte_id", rid);
-    if (delErr) return { ok: false, error: `delete turno_otros_insumos: ${delErr.message}` };
-    if (turno.otrosInsumos.length === 0) return { ok: true, error: null };
-    const rows = turno.otrosInsumos.map((o) => ({ ...otroInsumoRow(o, rid), id: o.id }));
-    const { error } = await supabase.from("turno_otros_insumos").upsert(rows);
-    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    return errResult(e, "upsert turno_otros_insumos");
-  }
-}
-
-async function syncHerramientaDirecto(h: HerramientaFila, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_herramientas")
-      .upsert({ ...herramientaRow(h, reporteId), id: h.id });
-    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    return errResult(e, "upsert turno_herramientas");
   }
 }
 
@@ -611,95 +522,6 @@ export async function syncInsumos(turno: Turno): Promise<SyncResult> {
     return errResult(e, "upsert turno_insumos");
   }
 }
-// Sync individual de una fila de Otros Insumos
-export async function syncOtroInsumo(o: OtroInsumo, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_otros_insumos")
-      .upsert({ ...otroInsumoRow(o, reporteId), id: o.id });
-    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "otrosinsumos", turnoId: reporteId, payload: o });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_otros_insumos");
-  }
-}
-
-export async function deleteOtroInsumoCloud(id: string, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase.from("turno_otros_insumos").delete().eq("id", id);
-    if (error) return { ok: false, error: `delete turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "otrosinsumos", turnoId: reporteId, payload: { id, _delete: true } });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "delete turno_otros_insumos");
-  }
-}
-
-// Sync batch de Otros Insumos
-export async function syncOtrosInsumos(turno: Turno): Promise<SyncResult> {
-  try {
-    const rid = turno.cloudId ?? turno.id;
-    const { error: delErr } = await supabase.from("turno_otros_insumos").delete().eq("reporte_id", rid);
-    if (delErr) return { ok: false, error: `delete turno_otros_insumos: ${delErr.message}` };
-    if (turno.otrosInsumos.length === 0) return { ok: true, error: null };
-    const rows = turno.otrosInsumos.map((o) => ({ ...otroInsumoRow(o, rid), id: o.id }));
-    const { error } = await supabase.from("turno_otros_insumos").upsert(rows);
-    if (error) return { ok: false, error: `upsert turno_otros_insumos: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "otrosinsumos", turnoId: turno.id, payload: turno });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_otros_insumos");
-  }
-}
-
-// Sync individual de una fila de Herramientas
-export async function syncHerramienta(h: HerramientaFila, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_herramientas")
-      .upsert({ ...herramientaRow(h, reporteId), id: h.id });
-    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "herramientas", turnoId: reporteId, payload: h });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_herramientas");
-  }
-}
-
-// Sync batch de Herramientas
-export async function syncHerramientas(turno: Turno): Promise<SyncResult> {
-  try {
-    const rid = turno.cloudId ?? turno.id;
-    if (turno.herramientas.length === 0) {
-      const { error: delErr } = await supabase.from("turno_herramientas").delete().eq("reporte_id", rid);
-      if (delErr) return { ok: false, error: `delete turno_herramientas: ${delErr.message}` };
-      return { ok: true, error: null };
-    }
-    const rows = turno.herramientas.map((h) => ({ ...herramientaRow(h, rid), id: h.id }));
-    const { error } = await supabase.from("turno_herramientas").upsert(rows);
-    if (error) return { ok: false, error: `upsert turno_herramientas: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "reporte", turnoId: turno.id, payload: turno });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_herramientas");
-  }
-}
 
 // TABLA 5: Cierre — UPDATE reportes_turno + INSERT turno_documentos_legales
 export async function cerrarTurnoCloud(turno: Turno): Promise<SyncResult> {
@@ -781,47 +603,21 @@ export async function autoSyncTurno(
     return syncInsumos(turno);
   }
 
-  if (scope === "otrosinsumos") {
-    if (entityId) {
-      const o = turno.otrosInsumos.find((x) => x.id === entityId);
-      if (o) return syncOtroInsumo(o, rid);
-      return deleteOtroInsumoCloud(entityId, rid);
-    }
-    return syncOtrosInsumos(turno);
-  }
-
-  if (scope === "herramientas") {
-    if (entityId) {
-      const h = turno.herramientas.find((x) => x.id === entityId);
-      if (h) {
-        const rH = await syncHerramienta(h, rid);
-        const rReporte = await syncReporte(turno);
-        if (!rH.ok && !rH.offline) return rH;
-        if (!rReporte.ok && !rReporte.offline) return rReporte;
-        return { ok: true, error: null, offline: !!(rH.offline || rReporte.offline) };
-      }
-    }
-    return syncHerramientas(turno);
-  }
-
   return syncTodo(turno);
 }
 
-// Sync completo (tramos + casing + bitacora + insumos + otros insumos + herramientas + reporte)
+// Sync completo (tramos + bitacora + insumos + reporte)
 export async function syncTodo(turno: Turno): Promise<SyncResult> {
-  const [r, t, c, b, i, oi, h] = await Promise.all([
+  const [r, t, c, b, i] = await Promise.all([
     syncReporte(turno),
     syncTramos(turno),
     syncCasingRows(turno),
     syncBitacora(turno),
     syncInsumos(turno),
-    syncOtrosInsumos(turno),
-    syncHerramientas(turno),
   ]);
-  const todos = [r, t, c, b, i, oi, h];
-  const allOffline = todos.every((x) => x.offline);
+  const allOffline = [r, t, c, b, i].every((x) => x.offline);
   if (allOffline) return { ok: true, error: null, offline: true };
-  const failed = todos.find((x) => !x.ok && !x.offline);
+  const failed = [r, t, c, b, i].find((x) => !x.ok && !x.offline);
   if (failed) return failed;
   return { ok: true, error: null };
 }

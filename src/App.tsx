@@ -5,27 +5,15 @@ import type {
   Tramo,
   CasingRow,
   HerramientaTipo,
-  HerramientaFila,
   ActividadBitacora,
   Insumo,
-  OtroInsumo,
 } from "@/types";
-import {
-  cargarTurnoActual,
-  guardarTurno,
-  cerrarTurno as cerrarEnDB,
-  pushAudit,
-  buscarUltimosTurnosPorPozo,
-  buscarUltimaHerramientaPorTipo,
-  buscarUltimoHorometroFinal,
-} from "@/db";
+import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit, buscarUltimosTurnosPorPozo } from "@/db";
 import {
   uid,
   ahoraISO,
   fechaHora,
   horaActualLocal,
-  horaDeISO,
-  HERRAMIENTAS_INICIALES,
 } from "@/config";
 import {
   insertReporteCloud,
@@ -234,27 +222,6 @@ export default function App() {
       if (Object.keys(patch).length > 0) patchTurno(patch);
     },
     [turno, patchTurno],
-  );
-
-  // Horómetro Inicial: se arrastra 100% local desde el último "Horómetro
-  // Final" registrado en esta tablet (sin importar el pozo). La primera vez
-  // que se usa la app, parte en 0.
-  useEffect(() => {
-    if (!turno || turno.inicializado || turno.horometroInicial != null) return;
-    const tId = turno.id;
-    buscarUltimoHorometroFinal().then((valor) => {
-      if (turnoRef.current?.id === tId && turnoRef.current.horometroInicial == null) {
-        patchTurno({ horometroInicial: valor ?? 0 });
-      }
-    });
-  }, [turno?.id, turno?.inicializado]);
-
-  const cambiarHorometroFinal = useCallback(
-    (v: number | null) => {
-      if (!turno) return;
-      persistirYSync({ ...turno, horometroFinal: v }, "reporte");
-    },
-    [turno, persistirYSync],
   );
 
   // Escucha en tiempo real: métricas y datos remotos en segundos
@@ -633,126 +600,31 @@ export default function App() {
     });
   }, [turno?.pozo, turno?.tramos.length]);
 
-  const agregarHerramienta = useCallback(
-    async (tipo: HerramientaTipo) => {
+  const cambiarHerramienta = useCallback(
+    (
+      tipo: HerramientaTipo,
+      datos: { diametro: string; marca: string; serie: string },
+    ) => {
       if (!turno) return;
-      const anteriorMismoTipo = [...turno.herramientas].reverse().find((h) => h.tipo === tipo);
-      const fondoActual =
-        turno.tramos.length > 0 ? turno.tramos[turno.tramos.length - 1].fondo : turno.profundidadInicial ?? 0;
-      const casingDesdeActual = turno.casing.length > 0 ? turno.casing[0].desde : 0;
-      const casingTotalActual = turno.casing.length > 0 ? turno.casing[turno.casing.length - 1].total : 0;
-
-      let base = anteriorMismoTipo ?? null;
-      if (!base) base = await buscarUltimaHerramientaPorTipo(tipo);
-      if (!base) base = HERRAMIENTAS_INICIALES.find((h) => h.tipo === tipo) ?? null;
-
-      let desde = 0;
-      let hasta = 0;
-      if (tipo === "corona" || tipo === "escareador") {
-        desde = fondoActual;
-        hasta = fondoActual;
-      } else if (tipo === "zapata") {
-        desde = casingDesdeActual;
-        hasta = casingTotalActual;
-      } else {
-        desde = base?.hasta ?? 0;
-        hasta = desde;
-      }
-
-      const nueva: HerramientaFila = {
+      const herramientas = turno.herramientas.map((h) =>
+        h.tipo === tipo ? { ...h, ...datos, actualizadaEn: ahoraISO() } : h,
+      );
+      const log = {
         id: uid(),
         tipo,
-        diametro: base?.diametro ?? "",
-        marca: base?.marca ?? "",
-        serie: base?.serie ?? "",
-        estado: "Usado",
-        desde,
-        hasta,
-        creadoEn: ahoraISO(),
+        ...datos,
+        operador: turno.operador || "—",
+        cambiadoEn: ahoraISO(),
       };
       const conAudit = pushAudit(
-        { ...turno, herramientas: [...turno.herramientas, nueva] },
-        "herramienta_agregada",
-        `${tipo} agregada`,
+        { ...turno, herramientas, historialHerramientas: [...turno.historialHerramientas, log] },
+        "herramienta_cambiada",
+        `${tipo}: ${datos.marca} ${datos.serie}`,
       );
-      persistirYSync(conAudit, "herramientas", nueva.id);
+      persistirYSync(conAudit, "reporte");
     },
     [turno, persistirYSync],
   );
-
-  const cambiarHerramienta = useCallback(
-    (id: string, patch: Partial<HerramientaFila>) => {
-      if (!turno) return;
-      persistirYSync(
-        {
-          ...turno,
-          herramientas: turno.herramientas.map((h) => (h.id === id ? { ...h, ...patch } : h)),
-        },
-        "herramientas",
-        id,
-      );
-    },
-    [turno, persistirYSync],
-  );
-
-  const syncHerramientaOnBlur = useCallback(
-    (id: string) => flushSyncPendiente("herramientas", id),
-    [flushSyncPendiente],
-  );
-
-  // Siembra inicial: si el turno todavía no tiene filas de herramientas,
-  // hereda (100% local) la última fila conocida de cada tipo en esta
-  // tablet, o los datos de ejemplo si es la primera vez que se usa la app.
-  useEffect(() => {
-    if (!turno || turno.herramientas.length > 0) return;
-    const tId = turno.id;
-    (async () => {
-      const tipos: HerramientaTipo[] = ["corona", "escareador", "zapata", "tricono"];
-      const filas: HerramientaFila[] = [];
-      for (const tipo of tipos) {
-        let base = await buscarUltimaHerramientaPorTipo(tipo);
-        if (!base) base = HERRAMIENTAS_INICIALES.find((h) => h.tipo === tipo) ?? null;
-        if (!base) continue;
-        filas.push({ ...base, id: uid(), creadoEn: ahoraISO() });
-      }
-      if (filas.length > 0 && turnoRef.current?.id === tId && turnoRef.current.herramientas.length === 0) {
-        persistirYSync({ ...turnoRef.current, herramientas: filas }, "herramientas");
-      }
-    })();
-  }, [turno?.id]);
-
-  // Actualización en vivo: mientras una fila de Corona/Escareador/Zapata es
-  // la más reciente de su tipo, su "Hasta" (y el "Desde" de Zapata) sigue el
-  // Fondo actual de Tramos o el estado actual de Casing.
-  useEffect(() => {
-    if (!turno) return;
-    const fondoActual =
-      turno.tramos.length > 0 ? turno.tramos[turno.tramos.length - 1].fondo : turno.profundidadInicial ?? 0;
-    const casingDesdeActual = turno.casing.length > 0 ? turno.casing[0].desde : 0;
-    const casingTotalActual = turno.casing.length > 0 ? turno.casing[turno.casing.length - 1].total : 0;
-
-    let cambio = false;
-    const nuevasHerramientas = turno.herramientas.map((h, idx, arr) => {
-      const esUltimaDeSuTipo = !arr.slice(idx + 1).some((x) => x.tipo === h.tipo);
-      if (!esUltimaDeSuTipo) return h;
-      if (h.tipo === "corona" || h.tipo === "escareador") {
-        if (h.hasta !== fondoActual) {
-          cambio = true;
-          return { ...h, hasta: fondoActual };
-        }
-      } else if (h.tipo === "zapata") {
-        if (h.desde !== casingDesdeActual || h.hasta !== casingTotalActual) {
-          cambio = true;
-          return { ...h, desde: casingDesdeActual, hasta: casingTotalActual };
-        }
-      }
-      return h;
-    });
-
-    if (cambio) {
-      persistirYSync({ ...turno, herramientas: nuevasHerramientas }, "herramientas");
-    }
-  }, [turno?.tramos, turno?.casing, turno?.herramientas.length]);
 
   const agregarActividad = useCallback(() => {
     if (!turno) return;
@@ -852,52 +724,6 @@ export default function App() {
     (id: string) => {
       if (!turno) return;
       persistirYSync({ ...turno, insumos: turno.insumos.filter((i) => i.id !== id) }, "insumos", id);
-    },
-    [turno, persistirYSync],
-  );
-
-  const cambiarDiesel = useCallback(
-    (v: number | null) => {
-      if (!turno) return;
-      persistirYSync({ ...turno, dieselLitros: v }, "reporte");
-    },
-    [turno, persistirYSync],
-  );
-
-  const agregarOtroInsumo = useCallback(() => {
-    if (!turno) return;
-    const nuevo: OtroInsumo = { id: uid(), cantidad: null, descripcion: "", creadoEn: ahoraISO() };
-    persistirYSync({ ...turno, otrosInsumos: [...turno.otrosInsumos, nuevo] }, "otrosinsumos", nuevo.id);
-  }, [turno, persistirYSync]);
-
-  const cambiarOtroInsumo = useCallback(
-    (id: string, patch: Partial<OtroInsumo>) => {
-      if (!turno) return;
-      persistirYSync(
-        {
-          ...turno,
-          otrosInsumos: turno.otrosInsumos.map((o) => (o.id === id ? { ...o, ...patch } : o)),
-        },
-        "otrosinsumos",
-        id,
-      );
-    },
-    [turno, persistirYSync],
-  );
-
-  const syncOtrosInsumosOnBlur = useCallback(
-    () => flushSyncPendiente("otrosinsumos"),
-    [flushSyncPendiente],
-  );
-
-  const eliminarOtroInsumo = useCallback(
-    (id: string) => {
-      if (!turno) return;
-      persistirYSync(
-        { ...turno, otrosInsumos: turno.otrosInsumos.filter((o) => o.id !== id) },
-        "otrosinsumos",
-        id,
-      );
     },
     [turno, persistirYSync],
   );
@@ -1143,11 +969,15 @@ export default function App() {
                   tramos={turno.tramos}
                   profundidadInicial={turno.profundidadInicial}
                   turnoActivo={turnoActivo}
+                  herramientas={turno.herramientas}
+                  historialHerramientas={turno.historialHerramientas}
+                  operador={turno.operador}
                   turnoCerrado={turnoCerrado}
                   onAgregar={agregarTramo}
                   onChangeTramo={cambiarTramo}
                   onBlurTramo={syncTramoOnBlur}
                   onEliminarTramo={eliminarTramo}
+                  onCambiarHerramienta={cambiarHerramienta}
                   barril={turno.barril}
                   muerto={turno.muerto}
                   onChangeBarrilMuerto={(patch) => patchTurno(patch)}
@@ -1199,20 +1029,12 @@ export default function App() {
                 onChangeInsumo={cambiarInsumo}
                 onBlurInsumos={syncInsumosOnBlur}
                 onEliminarInsumo={eliminarInsumo}
-                onChangeDiesel={cambiarDiesel}
-                onAgregarOtroInsumo={agregarOtroInsumo}
-                onChangeOtroInsumo={cambiarOtroInsumo}
-                onBlurOtrosInsumos={syncOtrosInsumosOnBlur}
-                onEliminarOtroInsumo={eliminarOtroInsumo}
-                onAgregarHerramienta={agregarHerramienta}
-                onChangeHerramienta={cambiarHerramienta}
-                onBlurHerramienta={syncHerramientaOnBlur}
                 onChangeObservaciones={(v) => patchTurno({ observaciones: v })}
                 onFirmaChange={(v) => patchTurno({ firmaDataURL: v })}
                 onCerrarTurno={cerrarTurno}
               />
             ) : (
-              <div className="flex items-center justify-center py-24">
+              <div className="flex items-center justify-center h-[calc(100vh-140px)]">
                 <div className="text-center bg-amber-500/10 border border-amber-500/30 rounded-xl p-8 max-w-md">
                   <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
                   <p className="text-lg font-bold text-amber-300">Por favor, inicie el turno en la Pestana 1 primero</p>

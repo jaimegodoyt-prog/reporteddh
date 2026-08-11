@@ -241,17 +241,6 @@ export function Inicializacion({
               </div>
             </div>
           </div>
-
-          {/* Horómetro Inicial - se arrastra del último Horómetro Final registrado */}
-          <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-            <span className="campo-label">Horómetro Inicial</span>
-            <div className="campo-bloqueado">
-              <Lock className="w-4 h-4 text-slate-500 shrink-0" />
-              <span className="font-bold text-slate-200">
-                {turno.horometroInicial != null ? turno.horometroInicial : "—"}
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* Operadores - editables siempre */}

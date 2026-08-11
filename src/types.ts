@@ -1,16 +1,11 @@
-export type HerramientaTipo = "corona" | "escareador" | "zapata" | "tricono";
-export type EstadoHerramienta = "Nuevo" | "Usado" | "";
+export type HerramientaTipo = "tricono" | "escareador" | "corona";
 
-export interface HerramientaFila {
-  id: string;
+export interface Herramienta {
   tipo: HerramientaTipo;
   diametro: string;
   marca: string;
   serie: string;
-  estado: EstadoHerramienta;
-  desde: number;
-  hasta: number;
-  creadoEn: string;
+  actualizadaEn: string;
 }
 
 export type TipoRoca =
@@ -54,12 +49,25 @@ export interface CambioOperador {
   motivo: string;
 }
 
+export interface CambioHerramientaLog {
+  id: string;
+  tipo: HerramientaTipo;
+  diametro: string;
+  marca: string;
+  serie: string;
+  operador: string;
+  cambiadoEn: string;
+}
+
+export type CargoHora = "propia" | "cliente";
+
 export interface ActividadBitacora {
   id: string;
   horaDesde: string; // HH:MM
   horaHasta: string | null;
   codigoOperacion: string;
   detalle: string;
+  cargoHora: CargoHora;
   creadoEn: string;
 }
 
@@ -70,13 +78,6 @@ export interface Insumo {
   nombre: string;
   unidad: UnidadInsumo;
   cantidad: number | null;
-  creadoEn: string;
-}
-
-export interface OtroInsumo {
-  id: string;
-  cantidad: number | null;
-  descripcion: string;
   creadoEn: string;
 }
 
@@ -107,8 +108,6 @@ export interface Turno {
   barril: number | null;
   muerto: number | null;
   casing: CasingRow[];
-  horometroInicial: number | null;
-  horometroFinal: number | null;
   inicializado: boolean;
 
   // Operadores (editables en cualquier momento)
@@ -119,12 +118,11 @@ export interface Turno {
 
   // Relacional
   tramos: Tramo[];
-  herramientas: HerramientaFila[];
+  herramientas: Herramienta[];
   historialRelevos: CambioOperador[];
+  historialHerramientas: CambioHerramientaLog[];
   bitacora: ActividadBitacora[];
   insumos: Insumo[];
-  dieselLitros: number | null;
-  otrosInsumos: OtroInsumo[];
   observaciones: string;
   firmaDataURL: string | null;
 

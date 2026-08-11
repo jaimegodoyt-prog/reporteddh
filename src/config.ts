@@ -1,4 +1,4 @@
-import type { Herramienta, HerramientaTipo } from "@/types";
+import type { HerramientaFila, HerramientaTipo } from "@/types";
 
 // Datos fijos de administrador - preconfigurados, no editables por el operador.
 export const ADMIN_CONFIG = {
@@ -7,33 +7,60 @@ export const ADMIN_CONFIG = {
 } as const;
 
 export const HERRAMIENTA_LABELS: Record<HerramientaTipo, string> = {
-  tricono: "Tricono",
+  corona: "Corona",
   escareador: "Escareador",
-  corona: "Corona Diamantina",
+  zapata: "Zapata",
+  tricono: "Tricono",
 };
 
-// Datos de herramientas heredados del turno anterior (simulado).
-export const HERRAMIENTAS_INICIALES: Herramienta[] = [
+export const HERRAMIENTA_ORDEN: HerramientaTipo[] = ["corona", "escareador", "zapata", "tricono"];
+
+// Datos de herramientas heredados del turno anterior (simulado, solo para la
+// primera vez que se usa la app en esta tablet).
+export const HERRAMIENTAS_INICIALES: HerramientaFila[] = [
   {
-    tipo: "tricono",
-    diametro: '5 7/8"',
-    marca: "Baker Hughes",
-    serie: "TR-04",
-    actualizadaEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    tipo: "escareador",
-    diametro: "HQ",
-    marca: "Fordia",
-    serie: "ESC-02",
-    actualizadaEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-  },
-  {
+    id: "seed-corona",
     tipo: "corona",
     diametro: "HQ3",
     marca: "Sandvik",
     serie: "CR-12",
-    actualizadaEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    estado: "Usado",
+    desde: 0,
+    hasta: 0,
+    creadoEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "seed-escareador",
+    tipo: "escareador",
+    diametro: "HQ",
+    marca: "Fordia",
+    serie: "ESC-02",
+    estado: "Usado",
+    desde: 0,
+    hasta: 0,
+    creadoEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "seed-zapata",
+    tipo: "zapata",
+    diametro: "HWT",
+    marca: "Boart Longyear",
+    serie: "ZP-01",
+    estado: "Usado",
+    desde: 0,
+    hasta: 0,
+    creadoEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "seed-tricono",
+    tipo: "tricono",
+    diametro: '5 7/8"',
+    marca: "Baker Hughes",
+    serie: "TR-04",
+    estado: "Usado",
+    desde: 0,
+    hasta: 0,
+    creadoEn: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -128,6 +155,13 @@ export function hora(iso: string): string {
 
 export function horaActualLocal(): string {
   const d = new Date();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+export function horaDeISO(iso: string): string {
+  const d = new Date(iso);
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;

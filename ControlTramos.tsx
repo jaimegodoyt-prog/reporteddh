@@ -87,7 +87,7 @@ export function ControlTramos({
   const totalHerramienta = barras + (barril ?? 0) - (muerto ?? 0);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col lg:flex-row gap-4">
       {/* Tabla de tramos - protagonista */}
       <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60">
         {/* Banner verde gigante */}
@@ -444,7 +444,7 @@ export function ControlTramos({
       </section>
 
       {/* Panel lateral de herramientas */}
-      <aside className="shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
+      <aside className="lg:w-[340px] shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
             <Wrench className="w-5 h-5 text-emerald-400" />

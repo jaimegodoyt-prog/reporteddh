@@ -87,9 +87,9 @@ export function ControlTramos({
   const totalHerramienta = barras + (barril ?? 0) - (muerto ?? 0);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:h-full">
+    <div className="flex flex-col gap-4">
       {/* Tabla de tramos - protagonista */}
-      <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60 overflow-hidden">
+      <section className="flex-1 flex flex-col min-w-0 rounded-xl border border-slate-700/70 bg-slate-800/60">
         {/* Banner verde gigante */}
         <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-6 py-4 flex items-center justify-between shadow-lg shrink-0">
           <div className="flex items-center gap-3">
@@ -250,9 +250,9 @@ export function ControlTramos({
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto scrollbar-thin">
+        <div className="overflow-auto scrollbar-thin">
           {tramos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6">
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
               <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
                 <Plus className="w-8 h-8 text-slate-400" />
               </div>
@@ -444,7 +444,7 @@ export function ControlTramos({
       </section>
 
       {/* Panel lateral de herramientas */}
-      <aside className="lg:w-[340px] shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
+      <aside className="shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
             <Wrench className="w-5 h-5 text-emerald-400" />

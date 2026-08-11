@@ -18,14 +18,11 @@ type FilaReporte = {
 
 type FilaTramo = {
   id?: string;
-  hta_desde?: number;
-  agrega?: number | null;
-  total_hta?: number;
-  fondo?: number;
-  resta?: number | null;
-  perf?: number | null;
+  desde?: number;
+  hasta?: number | null;
+  herramienta_activa?: string;
   recuperacion_porcentaje?: number | null;
-  tipo_roca?: string | null;
+  resta?: number | null;
   created_at?: string;
 };
 
@@ -57,23 +54,18 @@ type CallbackRealtime = (actualizacion: ActualizacionRealtime) => void;
 
 function calcularProfundidadFinal(tramos: Tramo[], profundidadInicial: number | null): number | null {
   const ultimo = tramos[tramos.length - 1];
-  if (ultimo) return ultimo.fondo;
+  if (ultimo?.hasta != null) return ultimo.hasta;
   return profundidadInicial;
 }
 
 function mapTramo(row: FilaTramo, idx: number): Tramo {
-  const htaDesde = Number(row.hta_desde ?? 0);
-  const agrega = row.agrega != null ? Number(row.agrega) : null;
   return {
     id: (row.id as string) ?? `rt-${idx}`,
-    htaDesde,
-    agrega,
-    totalHta: row.total_hta != null ? Number(row.total_hta) : htaDesde + (agrega ?? 0),
-    fondo: Number(row.fondo ?? 0),
-    resta: row.resta != null ? Number(row.resta) : null,
-    perf: row.perf != null ? Number(row.perf) : null,
+    desde: Number(row.desde ?? 0),
+    hasta: row.hasta != null ? Number(row.hasta) : null,
+    herramientaActiva: (row.herramienta_activa as HerramientaTipo) ?? "corona",
     recuperacion: row.recuperacion_porcentaje != null ? Number(row.recuperacion_porcentaje) : null,
-    tipoRoca: (row.tipo_roca as Tramo["tipoRoca"]) ?? "",
+    resta: row.resta != null ? Number(row.resta) : null,
     creadoEn: row.created_at ?? new Date().toISOString(),
   };
 }

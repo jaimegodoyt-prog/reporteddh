@@ -8,34 +8,13 @@ export interface Herramienta {
   actualizadaEn: string;
 }
 
-export type TipoRoca =
-  | "Semi compacta"
-  | "Semi fracturado"
-  | "Compacto duro"
-  | "Compacto blando"
-  | "Arena"
-  | "Arcilla"
-  | "";
-
 export interface Tramo {
   id: string;
-  htaDesde: number;
-  agrega: number | null;
-  totalHta: number;
-  fondo: number;
-  resta: number | null;
-  perf: number | null;
-  recuperacion: number | null;
-  tipoRoca: TipoRoca;
-  creadoEn: string;
-}
-
-export interface CasingRow {
-  id: string;
-  diametro: string;
   desde: number;
-  agrega: number | null;
-  total: number;
+  hasta: number | null;
+  herramientaActiva: HerramientaTipo;
+  recuperacion: number | null;
+  resta: number | null;
   creadoEn: string;
 }
 
@@ -105,9 +84,6 @@ export interface Turno {
   programado: number | null;
   casingDiametro: string;
   casingProfundidad: number | null;
-  barril: number | null;
-  muerto: number | null;
-  casing: CasingRow[];
   inicializado: boolean;
 
   // Operadores (editables en cualquier momento)

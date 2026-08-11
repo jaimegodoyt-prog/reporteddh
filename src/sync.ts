@@ -1,5 +1,5 @@
 import { supabase, getSupabaseConfigError } from "@/supabaseClient";
-import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo } from "@/types";
+import type { Turno, Tramo, ActividadBitacora, Insumo } from "@/types";
 
 export type SyncResult = {
   ok: boolean;
@@ -13,7 +13,7 @@ const COLA_KEY = "diamantina_cola_sync";
 
 type ItemCola = {
   id: string;
-  tipo: "reporte" | "tramo" | "bitacora" | "insumos" | "casing";
+  tipo: "reporte" | "tramo" | "bitacora" | "insumos";
   turnoId: string;
   payload: unknown;
   orden?: number;
@@ -79,8 +79,6 @@ export async function reintentarCola(): Promise<{ ok: number; fallidos: number }
       } else {
         r = await syncInsumoDirecto(payload as Insumo, item.turnoId);
       }
-    } else if (item.tipo === "casing") {
-      r = await syncCasingDirecto(item.payload as CasingRow, item.turnoId);
     } else {
       r = { ok: false, error: "tipo de cola desconocido" };
     }
@@ -173,31 +171,17 @@ function reporteRowUpdate(t: Turno) {
   };
 }
 
-export type SyncScope = "reporte" | "tramo" | "casing" | "bitacora" | "insumos" | "todo";
+export type SyncScope = "reporte" | "tramo" | "bitacora" | "insumos" | "todo";
 
 // TABLA 2: turno_trames
 function tramoRow(t: Tramo, reporteId: string) {
   return {
     reporte_id: reporteId,
-    hta_desde: t.htaDesde,
-    agrega: t.agrega,
-    total_hta: t.totalHta,
-    fondo: t.fondo,
-    resta: t.resta,
-    perf: t.perf,
+    desde: t.desde,
+    hasta: t.hasta,
+    herramienta_activa: t.herramientaActiva,
     recuperacion_porcentaje: t.recuperacion,
-    tipo_roca: t.tipoRoca || null,
-  };
-}
-
-// TABLA 2b: turno_casing
-function casingRow(c: CasingRow, reporteId: string) {
-  return {
-    reporte_id: reporteId,
-    diametro: c.diametro,
-    desde: c.desde,
-    agrega: c.agrega,
-    total: c.total,
+    resta: t.resta,
   };
 }
 
@@ -250,18 +234,6 @@ async function syncTramoDirecto(tramo: Tramo, reporteId: string): Promise<SyncRe
     return { ok: true, error: null };
   } catch (e) {
     return errResult(e, "upsert turno_trames");
-  }
-}
-
-async function syncCasingDirecto(fila: CasingRow, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_casing")
-      .upsert({ ...casingRow(fila, reporteId), id: fila.id });
-    if (error) return { ok: false, error: `upsert turno_casing: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    return errResult(e, "upsert turno_casing");
   }
 }
 
@@ -382,9 +354,9 @@ export async function syncTramos(turno: Turno): Promise<SyncResult> {
       if (delErr) return { ok: false, error: `delete turno_trames: ${delErr.message}` };
       return { ok: true, error: null };
     }
-    const rows = turno.tramos.map((t) => ({ ...tramoRow(t, rid), id: t.id }));
-    const { error } = await supabase.from("turno_trames").upsert(rows);
-    if (error) return { ok: false, error: `upsert turno_trames: ${error.message}` };
+    const rows = turno.tramos.map((t) => tramoRow(t, rid));
+    const { error } = await supabase.from("turno_trames").insert(rows);
+    if (error) return { ok: false, error: `insert turno_trames: ${error.message}` };
     return { ok: true, error: null };
   } catch (e) {
     if (esErrorDeRed(e)) {
@@ -392,45 +364,6 @@ export async function syncTramos(turno: Turno): Promise<SyncResult> {
       return { ok: true, error: null, offline: true };
     }
     return errResult(e, "upsert turno_trames");
-  }
-}
-
-// Sync individual de una fila de Casing
-export async function syncCasing(fila: CasingRow, reporteId: string): Promise<SyncResult> {
-  try {
-    const { error } = await supabase
-      .from("turno_casing")
-      .upsert({ ...casingRow(fila, reporteId), id: fila.id });
-    if (error) return { ok: false, error: `upsert turno_casing: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "casing", turnoId: reporteId, payload: fila });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_casing");
-  }
-}
-
-// Sync batch de todo el Casing
-export async function syncCasingRows(turno: Turno): Promise<SyncResult> {
-  try {
-    const rid = turno.cloudId ?? turno.id;
-    if (turno.casing.length === 0) {
-      const { error: delErr } = await supabase.from("turno_casing").delete().eq("reporte_id", rid);
-      if (delErr) return { ok: false, error: `delete turno_casing: ${delErr.message}` };
-      return { ok: true, error: null };
-    }
-    const rows = turno.casing.map((c) => ({ ...casingRow(c, rid), id: c.id }));
-    const { error } = await supabase.from("turno_casing").upsert(rows);
-    if (error) return { ok: false, error: `upsert turno_casing: ${error.message}` };
-    return { ok: true, error: null };
-  } catch (e) {
-    if (esErrorDeRed(e)) {
-      encolar({ tipo: "reporte", turnoId: turno.id, payload: turno });
-      return { ok: true, error: null, offline: true };
-    }
-    return errResult(e, "upsert turno_casing");
   }
 }
 
@@ -579,16 +512,6 @@ export async function autoSyncTurno(
     return { ok: true, error: null, offline: !!(rTramo.offline || rReporte.offline) };
   }
 
-  if (scope === "casing") {
-    const fila = entityId ? turno.casing.find((c) => c.id === entityId) : turno.casing.at(-1);
-    if (!fila) return { ok: true, error: null };
-    const rCasing = await syncCasing(fila, rid);
-    const rReporte = await syncReporte(turno);
-    if (!rCasing.ok && !rCasing.offline) return rCasing;
-    if (!rReporte.ok && !rReporte.offline) return rReporte;
-    return { ok: true, error: null, offline: !!(rCasing.offline || rReporte.offline) };
-  }
-
   if (scope === "bitacora") {
     const act = entityId ? turno.bitacora.find((a) => a.id === entityId) : turno.bitacora.at(-1);
     if (!act) return { ok: true, error: null };
@@ -609,16 +532,15 @@ export async function autoSyncTurno(
 
 // Sync completo (tramos + bitacora + insumos + reporte)
 export async function syncTodo(turno: Turno): Promise<SyncResult> {
-  const [r, t, c, b, i] = await Promise.all([
+  const [r, t, b, i] = await Promise.all([
     syncReporte(turno),
     syncTramos(turno),
-    syncCasingRows(turno),
     syncBitacora(turno),
     syncInsumos(turno),
   ]);
-  const allOffline = [r, t, c, b, i].every((x) => x.offline);
+  const allOffline = [r, t, b, i].every((x) => x.offline);
   if (allOffline) return { ok: true, error: null, offline: true };
-  const failed = [r, t, c, b, i].find((x) => !x.ok && !x.offline);
+  const failed = [r, t, b, i].find((x) => !x.ok && !x.offline);
   if (failed) return failed;
   return { ok: true, error: null };
 }

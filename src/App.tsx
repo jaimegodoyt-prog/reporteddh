@@ -16,7 +16,6 @@ import {
 import type {
   Turno,
   Tramo,
-  CasingRow,
   HerramientaTipo,
   ActividadBitacora,
   Insumo,
@@ -79,12 +78,6 @@ export default function App() {
   const [colaSync, setColaSync] = useState(0);
   const [metricasNube, setMetricasNube] = useState<MetricasNube | null>(null);
   const [realtimeActivo, setRealtimeActivo] = useState(false);
-  const [arrastrePozo, setArrastrePozo] = useState<{
-    totalHta: number;
-    resta: number | null;
-    casingDesde: number;
-    casingDiametro: string;
-  }>({ totalHta: 0, resta: null, casingDesde: 0, casingDiametro: "" });
 
   const turnoRef = useRef<Turno | null>(null);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,8 +207,8 @@ export default function App() {
       if (!ultimo) return;
       const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
       const patch: Partial<Turno> = {};
-      if (turno.profundidadInicial == null && ultimoTramo) {
-        patch.profundidadInicial = ultimoTramo.fondo;
+      if (turno.profundidadInicial == null && ultimoTramo?.hasta != null) {
+        patch.profundidadInicial = ultimoTramo.hasta;
       }
       if (turno.programado == null && ultimo.programado != null) {
         patch.programado = ultimo.programado;
@@ -225,12 +218,6 @@ export default function App() {
       }
       if (turno.casingProfundidad == null && ultimo.casingProfundidad != null) {
         patch.casingProfundidad = ultimo.casingProfundidad;
-      }
-      if (turno.barril == null && ultimo.barril != null) {
-        patch.barril = ultimo.barril;
-      }
-      if (turno.muerto == null && ultimo.muerto != null) {
-        patch.muerto = ultimo.muerto;
       }
       if (Object.keys(patch).length > 0) patchTurno(patch);
     },
@@ -454,67 +441,43 @@ export default function App() {
     setTimeout(() => setRelevoFlash(false), 2000);
   }, [turno, persistirYSync]);
 
-  // Recalcula Hta.desde/Total Hta./Fondo/Perf. de todos los tramos en orden,
-  // usando el arrastre del pozo (o 0) como punto de partida del primer tramo.
-  const recalcularTramos = useCallback(
-    (tramos: Tramo[], htaDesdeInicial: number, profundidadInicial: number): Tramo[] => {
-      let prevTotalHta = htaDesdeInicial;
-      let prevResta: number | null = null;
-      let prevFondo = profundidadInicial;
-      return tramos.map((t, idx) => {
-        const htaDesde = prevTotalHta;
-        const totalHta = htaDesde + (t.agrega ?? 0);
-        const perf =
-          idx === 0 ? null : t.resta != null && prevResta != null ? prevResta - t.resta : null;
-        const fondo = perf != null ? prevFondo + perf : prevFondo;
-        prevTotalHta = totalHta;
-        prevResta = t.resta;
-        prevFondo = fondo;
-        return { ...t, htaDesde, totalHta, perf, fondo };
-      });
-    },
-    [],
-  );
-
   const agregarTramo = useCallback(() => {
     if (!turno) return;
+    const baseDesde =
+      turno.tramos.length > 0
+        ? turno.tramos[turno.tramos.length - 1].hasta ?? turno.tramos[turno.tramos.length - 1].desde
+        : turno.profundidadInicial ?? 0;
+    const herramientaDefault: HerramientaTipo =
+      turno.tramos.length > 0
+        ? turno.tramos[turno.tramos.length - 1].herramientaActiva
+        : "corona";
     const nuevo: Tramo = {
       id: uid(),
-      htaDesde: 0,
-      agrega: null,
-      totalHta: 0,
-      fondo: 0,
-      resta: turno.tramos.length === 0 ? arrastrePozo.resta : null,
-      perf: null,
+      desde: baseDesde,
+      hasta: null,
+      herramientaActiva: herramientaDefault,
       recuperacion: null,
-      tipoRoca: "",
+      resta: null,
       creadoEn: ahoraISO(),
     };
-    const tramosRecalculados = recalcularTramos(
-      [...turno.tramos, nuevo],
-      arrastrePozo.totalHta,
-      turno.profundidadInicial ?? 0,
-    );
     const conAudit = pushAudit(
-      { ...turno, tramos: tramosRecalculados },
+      { ...turno, tramos: [...turno.tramos, nuevo] },
       "tramo_agregado",
-      `Tramo ${turno.tramos.length + 1} agregado`,
+      `Tramo ${turno.tramos.length + 1} desde ${baseDesde} m`,
     );
     persistirYSync(conAudit, "tramo", nuevo.id);
-  }, [turno, persistirYSync, arrastrePozo, recalcularTramos]);
+  }, [turno, persistirYSync]);
 
   const cambiarTramo = useCallback(
     (id: string, patch: Partial<Tramo>) => {
       if (!turno) return;
-      const tramosActualizados = turno.tramos.map((t) => (t.id === id ? { ...t, ...patch } : t));
-      const tramosRecalculados = recalcularTramos(
-        tramosActualizados,
-        arrastrePozo.totalHta,
-        turno.profundidadInicial ?? 0,
-      );
-      persistirYSync({ ...turno, tramos: tramosRecalculados }, "tramo", id);
+      const nuevoTurno = {
+        ...turno,
+        tramos: turno.tramos.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      };
+      persistirYSync(nuevoTurno, "tramo", id);
     },
-    [turno, persistirYSync, arrastrePozo, recalcularTramos],
+    [turno, persistirYSync],
   );
 
   const syncTramoOnBlur = useCallback(
@@ -525,93 +488,10 @@ export default function App() {
   const eliminarTramo = useCallback(
     (id: string) => {
       if (!turno) return;
-      const tramosRecalculados = recalcularTramos(
-        turno.tramos.filter((t) => t.id !== id),
-        arrastrePozo.totalHta,
-        turno.profundidadInicial ?? 0,
-      );
-      persistirYSync({ ...turno, tramos: tramosRecalculados }, "todo");
-    },
-    [turno, persistirYSync, arrastrePozo, recalcularTramos],
-  );
-
-  const agregarCasing = useCallback(() => {
-    if (!turno) return;
-    const ultimaFila = turno.casing[turno.casing.length - 1];
-    const desde = ultimaFila ? ultimaFila.total : arrastrePozo.casingDesde;
-    const diametro = ultimaFila ? ultimaFila.diametro : arrastrePozo.casingDiametro;
-    const nueva: CasingRow = {
-      id: uid(),
-      diametro,
-      desde,
-      agrega: null,
-      total: desde,
-      creadoEn: ahoraISO(),
-    };
-    const nuevoCasing = [...turno.casing, nueva];
-    const conAudit = pushAudit(
-      {
-        ...turno,
-        casing: nuevoCasing,
-        casingDiametro: nueva.diametro,
-        casingProfundidad: nueva.total,
-      },
-      "casing_agregado",
-      `Fila de Casing agregada`,
-    );
-    persistirYSync(conAudit, "casing", nueva.id);
-  }, [turno, persistirYSync, arrastrePozo]);
-
-  const cambiarCasing = useCallback(
-    (id: string, patch: Partial<CasingRow>) => {
-      if (!turno) return;
-      const nuevoCasing = turno.casing.map((c) => {
-        if (c.id !== id) return c;
-        const actualizado = { ...c, ...patch };
-        return { ...actualizado, total: actualizado.desde + (actualizado.agrega ?? 0) };
-      });
-      const ultima = nuevoCasing[nuevoCasing.length - 1];
-      persistirYSync(
-        {
-          ...turno,
-          casing: nuevoCasing,
-          casingDiametro: ultima?.diametro ?? turno.casingDiametro,
-          casingProfundidad: ultima?.total ?? turno.casingProfundidad,
-        },
-        "casing",
-        id,
-      );
+      persistirYSync({ ...turno, tramos: turno.tramos.filter((t) => t.id !== id) }, "todo");
     },
     [turno, persistirYSync],
   );
-
-  const syncCasingOnBlur = useCallback(
-    (id: string) => flushSyncPendiente("casing", id),
-    [flushSyncPendiente],
-  );
-
-  // Arrastre del pozo: mientras el turno todavía no tiene su primer tramo,
-  // averigua (100% local, sin señal) qué dejó el último turno del mismo
-  // pozo en esta tablet, para mostrar "Barras" y precargar el primer tramo.
-  useEffect(() => {
-    if (!turno || !turno.pozo.trim() || turno.tramos.length > 0) {
-      if (!turno?.pozo.trim()) {
-        setArrastrePozo({ totalHta: 0, resta: null, casingDesde: 0, casingDiametro: "" });
-      }
-      return;
-    }
-    buscarUltimosTurnosPorPozo(turno.pozo, 1).then((anteriores) => {
-      const ultimo = anteriores[0];
-      const ultimoTramo = ultimo?.tramos[ultimo.tramos.length - 1];
-      const ultimaCasing = ultimo?.casing[ultimo.casing.length - 1];
-      setArrastrePozo({
-        totalHta: ultimoTramo?.totalHta ?? 0,
-        resta: ultimoTramo?.resta ?? null,
-        casingDesde: ultimaCasing?.total ?? 0,
-        casingDiametro: ultimaCasing?.diametro ?? "",
-      });
-    });
-  }, [turno?.pozo, turno?.tramos.length]);
 
   const cambiarHerramienta = useCallback(
     (
@@ -767,10 +647,14 @@ export default function App() {
 
   // Cálculos derivados (métricas locales + confirmación en tiempo real desde nube)
   const ultimoTramo = turno?.tramos[turno.tramos.length - 1];
-  const profundidadFinalLocal = ultimoTramo?.fondo ?? turno?.profundidadInicial ?? 0;
+  const profundidadFinalLocal = ultimoTramo?.hasta ?? turno?.profundidadInicial ?? 0;
   const profundidadFinal = metricasNube?.profundidadFinal ?? profundidadFinalLocal;
   const totalPerforadoPozo = profundidadFinal - (turno?.profundidadInicial ?? 0);
-  const totalMetrosTurno = turno?.tramos.reduce((acc, t) => acc + (t.perf ?? 0), 0) ?? 0;
+  const totalMetrosTurno =
+    turno?.tramos.reduce((acc, t) => {
+      if (t.hasta != null && t.hasta > t.desde) return acc + (t.hasta - t.desde);
+      return acc;
+    }, 0) ?? 0;
 
   if (cargando) {
     return (
@@ -975,14 +859,6 @@ export default function App() {
                   onBlurTramo={syncTramoOnBlur}
                   onEliminarTramo={eliminarTramo}
                   onCambiarHerramienta={cambiarHerramienta}
-                  barril={turno.barril}
-                  muerto={turno.muerto}
-                  onChangeBarrilMuerto={(patch) => patchTurno(patch)}
-                  barrasArrastre={arrastrePozo.totalHta}
-                  casing={turno.casing}
-                  onAgregarCasing={agregarCasing}
-                  onChangeCasing={cambiarCasing}
-                  onBlurCasing={syncCasingOnBlur}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">

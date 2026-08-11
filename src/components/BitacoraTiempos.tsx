@@ -8,6 +8,7 @@ interface Props {
   turnoActivo: boolean;
   onAgregar: () => void;
   onChange: (id: string, patch: Partial<ActividadBitacora>) => void;
+  onCerrarActividad: (id: string) => void;
   onBlurActividad: (id: string) => void;
   onEliminar: (id: string) => void;
 }
@@ -17,6 +18,7 @@ export function BitacoraTiempos({
   turnoActivo,
   onAgregar,
   onChange,
+  onCerrarActividad,
   onBlurActividad,
   onEliminar,
 }: Props) {
@@ -81,20 +83,22 @@ export function BitacoraTiempos({
                       </div>
                     </td>
                     <td className="px-3 py-2">
-                      <input
-                        type="time"
-                        value={act.horaHasta ?? ""}
-                        onChange={(e) =>
-                          onChange(act.id, { horaHasta: e.target.value || null })
-                        }
-                        onBlur={() => onBlurActividad(act.id)}
-                        disabled={!esUltimo}
-                        className={`w-24 rounded-md border px-2 py-2 text-base font-bold outline-none transition ${
-                          esUltimo
-                            ? "border-slate-600 bg-slate-900 text-slate-100 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30"
-                            : "border-slate-700/50 bg-slate-900/40 text-slate-400 cursor-not-allowed"
-                        }`}
-                      />
+                      {act.horaHasta != null ? (
+                        <div className="flex items-center gap-1.5 text-slate-400 font-bold w-24 px-2 py-2">
+                          <Lock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                          {act.horaHasta}
+                        </div>
+                      ) : esUltimo ? (
+                        <button
+                          onClick={() => onCerrarActividad(act.id)}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-2 text-xs font-bold text-white transition active:scale-95"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          Registrar hora
+                        </button>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
                     </td>
 
                     <td className="px-3 py-2">

@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Turno, AuditEntry } from "@/types";
+import type { Turno, AuditEntry, Tramo, CasingRow } from "@/types";
 import { ADMIN_CONFIG, HERRAMIENTAS_INICIALES, uid, ahoraISO } from "@/config";
 
 interface DiamantinaDB extends DBSchema {
@@ -23,6 +23,38 @@ export function guardarTurnoLocalStorage(turno: Turno): void {
   }
 }
 
+function normalizarTramo(raw: any): Tramo {
+  // Compatibilidad con tramos guardados antes del rediseño (columnas
+  // desde/hasta/herramientaActiva) — se traducen a la nueva estructura.
+  const htaDesde = raw.htaDesde ?? raw.desde ?? 0;
+  const agrega = raw.agrega ?? null;
+  const totalHta = raw.totalHta ?? htaDesde + (agrega ?? 0);
+  const fondo = raw.fondo ?? raw.hasta ?? htaDesde;
+  return {
+    id: raw.id,
+    htaDesde,
+    agrega,
+    totalHta,
+    fondo,
+    resta: raw.resta ?? null,
+    perf: raw.perf ?? null,
+    recuperacion: raw.recuperacion ?? null,
+    tipoRoca: raw.tipoRoca ?? "",
+    creadoEn: raw.creadoEn ?? ahoraISO(),
+  };
+}
+
+function normalizarCasingRow(raw: any): CasingRow {
+  return {
+    id: raw.id,
+    diametro: raw.diametro ?? "",
+    desde: raw.desde ?? 0,
+    agrega: raw.agrega ?? null,
+    total: raw.total ?? (raw.desde ?? 0) + (raw.agrega ?? 0),
+    creadoEn: raw.creadoEn ?? ahoraISO(),
+  };
+}
+
 function normalizarTurno(raw: Turno): Turno {
   const insumosRaw = Array.isArray(raw.insumos) ? raw.insumos : [];
   const insumosVistos = new Set<string>();
@@ -34,7 +66,7 @@ function normalizarTurno(raw: Turno): Turno {
 
   return {
     ...raw,
-    tramos: Array.isArray(raw.tramos) ? raw.tramos : [],
+    tramos: Array.isArray(raw.tramos) ? raw.tramos.map(normalizarTramo) : [],
     bitacora: Array.isArray(raw.bitacora) ? raw.bitacora : [],
     insumos,
     herramientas: Array.isArray(raw.herramientas) ? raw.herramientas : HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
@@ -46,6 +78,9 @@ function normalizarTurno(raw: Turno): Turno {
     programado: raw.programado ?? null,
     casingDiametro: raw.casingDiametro ?? "",
     casingProfundidad: raw.casingProfundidad ?? null,
+    barril: raw.barril ?? null,
+    muerto: raw.muerto ?? null,
+    casing: Array.isArray(raw.casing) ? raw.casing.map(normalizarCasingRow) : [],
   };
 }
 
@@ -96,6 +131,9 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     programado: null,
     casingDiametro: "",
     casingProfundidad: null,
+    barril: null,
+    muerto: null,
+    casing: [],
     inicializado: false,
     operador: "",
     ayudante1: "",
@@ -143,8 +181,8 @@ export async function cargarTurnoActual(): Promise<Turno> {
   if (cerrados.length > 0) {
     const ultimo = cerrados.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0];
     const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
-    if (ultimoTramo && ultimoTramo.hasta != null) {
-      profundidadInicial = ultimoTramo.hasta;
+    if (ultimoTramo) {
+      profundidadInicial = ultimoTramo.fondo;
     }
   }
   const nuevo = crearTurnoNuevo(profundidadInicial);

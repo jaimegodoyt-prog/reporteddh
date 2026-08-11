@@ -1,5 +1,5 @@
 import { supabase, getSupabaseConfigError } from "@/supabaseClient";
-import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo } from "@/types";
+import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo, OtroInsumo, HerramientaFila } from "@/types";
 
 export type SyncResult = {
   ok: boolean;

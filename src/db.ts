@@ -151,6 +151,8 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     barril: null,
     muerto: null,
     casing: [],
+    horometroInicial: null,
+    horometroFinal: null,
     inicializado: false,
     operador: "",
     ayudante1: "",

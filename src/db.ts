@@ -263,6 +263,26 @@ export async function buscarUltimosTurnosPorPozo(
 }
 
 /**
+ * Busca en el historial local de la tablet el último "Horómetro Final"
+ * registrado, sin importar el pozo — el horómetro es correlativo del
+ * equipo completo, no de un pozo en particular.
+ */
+export async function buscarUltimoHorometroFinal(): Promise<number | null> {
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  let ultimoValor: number | null = null;
+  let ultimaFecha = "";
+  for (const t of todos) {
+    if (t.horometroFinal == null) continue;
+    if (t.fecha > ultimaFecha) {
+      ultimaFecha = t.fecha;
+      ultimoValor = t.horometroFinal;
+    }
+  }
+  return ultimoValor;
+}
+
+/**
  * Busca en el historial local de la tablet la última fila registrada de un
  * tipo de herramienta (Corona, Escareador, Zapata o Tricono), sin importar
  * el pozo — la herramienta se mueve con el equipo, no con el pozo.

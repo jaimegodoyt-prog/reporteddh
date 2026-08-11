@@ -98,6 +98,8 @@ function normalizarTurno(raw: Turno): Turno {
     casing: Array.isArray(raw.casing) ? raw.casing.map(normalizarCasingRow) : [],
     dieselLitros: raw.dieselLitros ?? null,
     otrosInsumos: Array.isArray(raw.otrosInsumos) ? raw.otrosInsumos : [],
+    horometroInicial: raw.horometroInicial ?? null,
+    horometroFinal: raw.horometroFinal ?? null,
   };
 }
 

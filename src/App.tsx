@@ -659,6 +659,22 @@ export default function App() {
     [turno, persistirYSync],
   );
 
+  const cerrarActividad = useCallback(
+    (id: string) => {
+      if (!turno) return;
+      const ahora = horaActualLocal();
+      persistirYSync(
+        {
+          ...turno,
+          bitacora: turno.bitacora.map((a) => (a.id === id ? { ...a, horaHasta: ahora } : a)),
+        },
+        "bitacora",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
   const syncActividadOnBlur = useCallback(
     (id: string) => flushSyncPendiente("bitacora", id),
     [flushSyncPendiente],

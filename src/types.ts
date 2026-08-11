@@ -107,6 +107,8 @@ export interface Turno {
   barril: number | null;
   muerto: number | null;
   casing: CasingRow[];
+  horometroInicial: number | null;
+  horometroFinal: number | null;
   inicializado: boolean;
 
   // Operadores (editables en cualquier momento)

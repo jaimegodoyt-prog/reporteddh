@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Turno, AuditEntry, Tramo, CasingRow } from "@/types";
+import type { Turno, AuditEntry, Tramo, CasingRow, HerramientaFila, HerramientaTipo } from "@/types";
 import { ADMIN_CONFIG, HERRAMIENTAS_INICIALES, uid, ahoraISO } from "@/config";
 
 interface DiamantinaDB extends DBSchema {
@@ -55,6 +55,22 @@ function normalizarCasingRow(raw: any): CasingRow {
   };
 }
 
+function normalizarHerramienta(raw: any): HerramientaFila {
+  // Compatibilidad con herramientas guardadas antes del rediseño (sin id,
+  // sin estado/desde/hasta, tipo "tricono/escareador/corona" solamente).
+  return {
+    id: raw.id ?? uid(),
+    tipo: (raw.tipo as HerramientaTipo) ?? "corona",
+    diametro: raw.diametro ?? "",
+    marca: raw.marca ?? "",
+    serie: raw.serie ?? "",
+    estado: raw.estado ?? "Usado",
+    desde: raw.desde ?? 0,
+    hasta: raw.hasta ?? 0,
+    creadoEn: raw.creadoEn ?? raw.actualizadaEn ?? ahoraISO(),
+  };
+}
+
 function normalizarTurno(raw: Turno): Turno {
   const insumosRaw = Array.isArray(raw.insumos) ? raw.insumos : [];
   const insumosVistos = new Set<string>();
@@ -69,9 +85,8 @@ function normalizarTurno(raw: Turno): Turno {
     tramos: Array.isArray(raw.tramos) ? raw.tramos.map(normalizarTramo) : [],
     bitacora: Array.isArray(raw.bitacora) ? raw.bitacora : [],
     insumos,
-    herramientas: Array.isArray(raw.herramientas) ? raw.herramientas : HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
+    herramientas: Array.isArray(raw.herramientas) ? raw.herramientas.map(normalizarHerramienta) : [],
     historialRelevos: Array.isArray(raw.historialRelevos) ? raw.historialRelevos : [],
-    historialHerramientas: Array.isArray(raw.historialHerramientas) ? raw.historialHerramientas : [],
     audit: Array.isArray(raw.audit) ? raw.audit : [],
     observaciones: raw.observaciones ?? "",
     firmaDataURL: raw.firmaDataURL ?? null,
@@ -81,6 +96,8 @@ function normalizarTurno(raw: Turno): Turno {
     barril: raw.barril ?? null,
     muerto: raw.muerto ?? null,
     casing: Array.isArray(raw.casing) ? raw.casing.map(normalizarCasingRow) : [],
+    dieselLitros: raw.dieselLitros ?? null,
+    otrosInsumos: Array.isArray(raw.otrosInsumos) ? raw.otrosInsumos : [],
   };
 }
 
@@ -128,114 +145,4 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     pozo: "",
     orientacion: "",
     profundidadInicial,
-    programado: null,
-    casingDiametro: "",
-    casingProfundidad: null,
-    barril: null,
-    muerto: null,
-    casing: [],
-    inicializado: false,
-    operador: "",
-    ayudante1: "",
-    ayudante2: "",
-    ayudante3: "",
-    tramos: [],
-    herramientas: HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
-    historialRelevos: [],
-    historialHerramientas: [],
-    bitacora: [],
-    insumos: [],
-    observaciones: "",
-    firmaDataURL: null,
-    audit: [
-      { timestamp: ahora, accion: "turno_creado", detalle: "Turno creado localmente" },
-    ],
-    iniciadoEn: null,
-    cerradoEn: null,
-    cloudId: id,
-  };
-}
-
-export async function cargarTurnoActual(): Promise<Turno> {
-  // 1) localStorage primero — recuperación instantánea en la tablet
-  const desdeLS = cargarTurnoLocalStorage();
-  if (desdeLS && desdeLS.estado !== "cerrado") {
-    const turno = normalizarTurno(desdeLS);
-    getDB()
-      .then((db) => db.put("turnos", turno))
-      .catch(() => {});
-    return turno;
-  }
-
-  const db = await getDB();
-  const todos = await db.getAll("turnos");
-  const abiertos = todos.filter((t) => t.estado !== "cerrado");
-  if (abiertos.length > 0) {
-    const turno = normalizarTurno(abiertos.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0]);
-    guardarTurnoLocalStorage(turno);
-    return turno;
-  }
-  // Crear nuevo heredando profundidad inicial del último cerrado
-  const cerrados = todos.filter((t) => t.estado === "cerrado");
-  let profundidadInicial: number | null = null;
-  if (cerrados.length > 0) {
-    const ultimo = cerrados.sort((a, b) => (b.fecha > a.fecha ? 1 : -1))[0];
-    const ultimoTramo = ultimo.tramos[ultimo.tramos.length - 1];
-    if (ultimoTramo) {
-      profundidadInicial = ultimoTramo.fondo;
-    }
-  }
-  const nuevo = crearTurnoNuevo(profundidadInicial);
-  guardarTurnoLocalStorage(nuevo);
-  await db.put("turnos", nuevo);
-  return nuevo;
-}
-
-export async function guardarTurno(turno: Turno): Promise<void> {
-  guardarTurnoLocalStorage(turno);
-  const db = await getDB();
-  await db.put("turnos", turno);
-}
-
-export function pushAudit(turno: Turno, accion: string, detalle: string): Turno {
-  const entry: AuditEntry = { timestamp: ahoraISO(), accion, detalle };
-  return { ...turno, audit: [...turno.audit, entry] };
-}
-
-export async function cerrarTurno(turno: Turno): Promise<Turno> {
-  const conAudit = pushAudit(turno, "turno_cerrado", "Reporte inmutable generado");
-  const cerrado: Turno = {
-    ...conAudit,
-    estado: "cerrado",
-    cerradoEn: ahoraISO(),
-  };
-  await guardarTurno(cerrado);
-  return cerrado;
-}
-
-export async function contarTurnosCerrados(): Promise<number> {
-  const db = await getDB();
-  const todos = await db.getAll("turnos");
-  return todos.filter((t) => t.estado === "cerrado").length;
-}
-
-/**
- * Busca en el historial local de la tablet (todos los turnos ya guardados en
- * este dispositivo, sin necesidad de señal) los últimos turnos que
- * trabajaron el mismo número de pozo. Se usa para autocompletar datos al
- * iniciar un turno nuevo sobre un pozo ya conocido por esta tablet.
- */
-export async function buscarUltimosTurnosPorPozo(
-  pozo: string,
-  cantidad: number = 2,
-): Promise<Turno[]> {
-  const pozoNorm = pozo.trim().toLowerCase();
-  if (!pozoNorm) return [];
-  const db = await getDB();
-  const todos = await db.getAll("turnos");
-  return todos
-    .filter((t) => t.pozo.trim().toLowerCase() === pozoNorm && t.estado !== "borrador")
-    .sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0))
-    .slice(0, cantidad)
-    .map(normalizarTurno);
-}
+    programado:

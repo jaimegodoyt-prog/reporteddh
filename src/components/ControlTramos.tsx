@@ -264,7 +264,7 @@ export function ControlTramos({
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-slate-900/80">
+              <thead className="bg-slate-900/80 sticky top-0 z-10">
                 <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-3 py-3 w-10">N°</th>
                   <th className="px-3 py-3">Hta. desde</th>

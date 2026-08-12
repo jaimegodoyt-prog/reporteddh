@@ -12,6 +12,8 @@ export const HERRAMIENTA_LABELS: Record<HerramientaTipo, string> = {
   corona: "Corona Diamantina",
 };
 
+export const HERRAMIENTA_ORDEN: HerramientaTipo[] = ["tricono", "escareador", "corona"];
+
 // Datos de herramientas heredados del turno anterior (simulado).
 export const HERRAMIENTAS_INICIALES: Herramienta[] = [
   {

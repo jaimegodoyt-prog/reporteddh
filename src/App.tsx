@@ -141,7 +141,12 @@ export default function App() {
       setSyncEstado("sincronizando");
       ignorarRealtimeRef.current = true;
       const r = await autoSyncTurno(t, scope, entityId);
-      ignorarRealtimeRef.current = false;
+      // La confirmación en tiempo real (websocket) puede llegar después de
+      // que termine esta escritura HTTP — esperamos un poco antes de volver
+      // a escuchar, para no dejarnos pisar el dato recién escrito.
+      setTimeout(() => {
+        ignorarRealtimeRef.current = false;
+      }, 2500);
       procesarResultadoSync(r, `auto-sync ${scope}`);
       setColaSync(colaPendiente());
     },

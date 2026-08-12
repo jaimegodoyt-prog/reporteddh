@@ -244,7 +244,7 @@ export default function App() {
     const cancelar = suscribirTurnoRealtime(cloudId, turno.profundidadInicial, (act) => {
       setMetricasNube(act.metricas);
       if (ignorarRealtimeRef.current) return;
-      if (Date.now() - ultimaEscrituraRef.current < 2000) return;
+      if (Date.now() - ultimaEscrituraRef.current < 5000) return;
       if (!act.parche || !turnoRef.current) return;
 
       const merged = { ...turnoRef.current, ...act.parche };

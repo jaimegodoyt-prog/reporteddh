@@ -256,7 +256,7 @@ export function AditivosCierre({
                 </tr>
               </thead>
               <tbody>
-                {turno.otrosInsumos.map((o) => (
+                {(turno.otrosInsumos ?? []).map((o) => (
                   <tr key={o.id} className="border-b border-slate-700/40">
                     <td className="px-3 py-2">
                       <input
@@ -320,7 +320,7 @@ export function AditivosCierre({
             <TablaHerramienta
               key={tipo}
               tipo={tipo}
-              filas={turno.herramientas.filter((h) => h.tipo === tipo)}
+              filas={(turno.herramientas ?? []).filter((h) => h.tipo === tipo)}
               turnoActivo={turnoActivo}
               turnoCerrado={turnoCerrado}
               onAgregar={() => onAgregarHerramienta(tipo)}
@@ -453,6 +453,17 @@ function TablaHerramienta({
   // Desde/Hasta son automáticos (con candado) para corona, escareador y
   // zapata — solo el Tricono los captura manualmente.
   const desdeHastaManual = tipo === "tricono";
+  // Blindaje: normaliza cada fila para que ningún campo pueda venir
+  // undefined, sin importar si la herramienta es de antes del rediseño.
+  const filasSeguras = filas.map((h) => ({
+    ...h,
+    diametro: h.diametro ?? "",
+    marca: h.marca ?? "",
+    serie: h.serie ?? "",
+    estado: h.estado ?? "",
+    desde: h.desde ?? 0,
+    hasta: h.hasta ?? 0,
+  }));
 
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">
@@ -469,7 +480,7 @@ function TablaHerramienta({
         )}
       </div>
 
-      {filas.length === 0 ? (
+      {filasSeguras.length === 0 ? (
         <p className="text-xs text-slate-500">Sin registros de {HERRAMIENTA_LABELS[tipo]} en este turno.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -486,8 +497,8 @@ function TablaHerramienta({
               </tr>
             </thead>
             <tbody>
-              {filas.map((h, idx) => {
-                const esUltimo = idx === filas.length - 1;
+              {filasSeguras.map((h, idx) => {
+                const esUltimo = idx === filasSeguras.length - 1;
                 const editable = esUltimo && !turnoCerrado;
                 const total = h.hasta - h.desde;
                 return (

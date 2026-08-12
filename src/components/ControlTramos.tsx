@@ -53,6 +53,7 @@ interface Props {
   muerto: number | null;
   onChangeBarrilMuerto: (patch: { barril?: number | null; muerto?: number | null }) => void;
   barrasArrastre: number;
+  casingDiametroArrastre: string;
   casing: CasingRow[];
   onAgregarCasing: () => void;
   onChangeCasing: (id: string, patch: Partial<CasingRow>) => void;

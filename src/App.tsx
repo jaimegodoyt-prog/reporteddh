@@ -854,6 +854,140 @@ export default function App() {
     },
     [turno, persistirYSync],
   );
+  const cambiarDiesel = useCallback(
+    (v: number | null) => {
+      if (!turno) return;
+      persistirYSync({ ...turno, dieselLitros: v }, "reporte");
+    },
+    [turno, persistirYSync],
+  );
+
+  const agregarOtroInsumo = useCallback(() => {
+    if (!turno) return;
+    const nuevo: OtroInsumo = { id: uid(), cantidad: null, descripcion: "", creadoEn: ahoraISO() };
+    persistirYSync({ ...turno, otrosInsumos: [...(turno.otrosInsumos ?? []), nuevo] }, "otrosinsumos", nuevo.id);
+  }, [turno, persistirYSync]);
+
+  const cambiarOtroInsumo = useCallback(
+    (id: string, patch: Partial<OtroInsumo>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          otrosInsumos: (turno.otrosInsumos ?? []).map((o) => (o.id === id ? { ...o, ...patch } : o)),
+        },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncOtrosInsumosOnBlur = useCallback(
+    () => flushSyncPendiente("otrosinsumos"),
+    [flushSyncPendiente],
+  );
+
+  const eliminarOtroInsumo = useCallback(
+    (id: string) => {
+      if (!turno) return;
+      persistirYSync(
+        { ...turno, otrosInsumos: (turno.otrosInsumos ?? []).filter((o) => o.id !== id) },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );const cambiarDiesel = useCallback(
+    (v: number | null) => {
+      if (!turno) return;
+      persistirYSync({ ...turno, dieselLitros: v }, "reporte");
+    },
+    [turno, persistirYSync],
+  );
+
+  const agregarOtroInsumo = useCallback(() => {
+    if (!turno) return;
+    const nuevo: OtroInsumo = { id: uid(), cantidad: null, descripcion: "", creadoEn: ahoraISO() };
+    persistirYSync({ ...turno, otrosInsumos: [...(turno.otrosInsumos ?? []), nuevo] }, "otrosinsumos", nuevo.id);
+  }, [turno, persistirYSync]);
+
+  const cambiarOtroInsumo = useCallback(
+    (id: string, patch: Partial<OtroInsumo>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          otrosInsumos: (turno.otrosInsumos ?? []).map((o) => (o.id === id ? { ...o, ...patch } : o)),
+        },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncOtrosInsumosOnBlur = useCallback(
+    () => flushSyncPendiente("otrosinsumos"),
+    [flushSyncPendiente],
+  );
+
+  const eliminarOtroInsumo = useCallback(
+    (id: string) => {
+      if (!turno) return;
+      persistirYSync(
+        { ...turno, otrosInsumos: (turno.otrosInsumos ?? []).filter((o) => o.id !== id) },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+  const cambiarDiesel = useCallback(
+    (v: number | null) => {
+      if (!turno) return;
+      persistirYSync({ ...turno, dieselLitros: v }, "reporte");
+    },
+    [turno, persistirYSync],
+  );
+
+  const agregarOtroInsumo = useCallback(() => {
+    if (!turno) return;
+    const nuevo: OtroInsumo = { id: uid(), cantidad: null, descripcion: "", creadoEn: ahoraISO() };
+    persistirYSync({ ...turno, otrosInsumos: [...(turno.otrosInsumos ?? []), nuevo] }, "otrosinsumos", nuevo.id);
+  }, [turno, persistirYSync]);
+
+  const cambiarOtroInsumo = useCallback(
+    (id: string, patch: Partial<OtroInsumo>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          otrosInsumos: (turno.otrosInsumos ?? []).map((o) => (o.id === id ? { ...o, ...patch } : o)),
+        },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncOtrosInsumosOnBlur = useCallback(
+    () => flushSyncPendiente("otrosinsumos"),
+    [flushSyncPendiente],
+  );
+
+  const eliminarOtroInsumo = useCallback(
+    (id: string) => {
+      if (!turno) return;
+      persistirYSync(
+        { ...turno, otrosInsumos: (turno.otrosInsumos ?? []).filter((o) => o.id !== id) },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
 
   const cerrarTurno = useCallback(async () => {
     if (!turno) return;

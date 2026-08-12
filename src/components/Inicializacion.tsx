@@ -21,9 +21,9 @@ import { fechaHora } from "@/config";
 
 // Agrupa las filas de Casing por diámetro consecutivo, mostrando la
 // profundidad alcanzada por cada diámetro (el último Total de ese grupo).
-function resumenCasing(casing: CasingRow[] | undefined): { diametro: string; profundidad: number }[] {
+function resumenCasing(casing: CasingRow[]): { diametro: string; profundidad: number }[] {
   const grupos: { diametro: string; profundidad: number }[] = [];
-  for (const c of casing ?? []) {
+  for (const c of casing) {
     const ultimo = grupos[grupos.length - 1];
     if (ultimo && ultimo.diametro === c.diametro) {
       ultimo.profundidad = c.total;

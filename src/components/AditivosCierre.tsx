@@ -71,7 +71,7 @@ export function AditivosCierre({
   const turnoActivo = turno.estado === "iniciado";
   const firmado = !!turno.firmaDataURL;
   const hayInsumos = turno.insumos.length > 0;
-  const hayOtrosInsumos = (turno.otrosInsumos ?? []).length > 0;
+  const hayOtrosInsumos = turno.otrosInsumos.length > 0;
 
   const puedeCerrar =
     turnoActivo && firmado && turno.operador.trim() !== "";
@@ -256,7 +256,7 @@ export function AditivosCierre({
                 </tr>
               </thead>
               <tbody>
-                {(turno.otrosInsumos ?? []).map((o) => (
+                {turno.otrosInsumos.map((o) => (
                   <tr key={o.id} className="border-b border-slate-700/40">
                     <td className="px-3 py-2">
                       <input
@@ -320,7 +320,7 @@ export function AditivosCierre({
             <TablaHerramienta
               key={tipo}
               tipo={tipo}
-              filas={(turno.herramientas ?? []).filter((h) => h.tipo === tipo)}
+              filas={turno.herramientas.filter((h) => h.tipo === tipo)}
               turnoActivo={turnoActivo}
               turnoCerrado={turnoCerrado}
               onAgregar={() => onAgregarHerramienta(tipo)}

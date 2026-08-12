@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Turno, AuditEntry, Tramo, CasingRow, HerramientaFila, HerramientaTipo } from "@/types";
+import type { Turno, AuditEntry, Tramo, CasingRow } from "@/types";
 import { ADMIN_CONFIG, HERRAMIENTAS_INICIALES, uid, ahoraISO } from "@/config";
 
 interface DiamantinaDB extends DBSchema {
@@ -55,22 +55,6 @@ function normalizarCasingRow(raw: any): CasingRow {
   };
 }
 
-function normalizarHerramienta(raw: any): HerramientaFila {
-  // Compatibilidad con herramientas guardadas antes del rediseño (sin id,
-  // sin estado/desde/hasta, tipo "tricono/escareador/corona" solamente).
-  return {
-    id: raw.id ?? uid(),
-    tipo: (raw.tipo as HerramientaTipo) ?? "corona",
-    diametro: raw.diametro ?? "",
-    marca: raw.marca ?? "",
-    serie: raw.serie ?? "",
-    estado: raw.estado ?? "Usado",
-    desde: raw.desde ?? 0,
-    hasta: raw.hasta ?? 0,
-    creadoEn: raw.creadoEn ?? raw.actualizadaEn ?? ahoraISO(),
-  };
-}
-
 function normalizarTurno(raw: Turno): Turno {
   const insumosRaw = Array.isArray(raw.insumos) ? raw.insumos : [];
   const insumosVistos = new Set<string>();
@@ -85,8 +69,9 @@ function normalizarTurno(raw: Turno): Turno {
     tramos: Array.isArray(raw.tramos) ? raw.tramos.map(normalizarTramo) : [],
     bitacora: Array.isArray(raw.bitacora) ? raw.bitacora : [],
     insumos,
-    herramientas: Array.isArray(raw.herramientas) ? raw.herramientas.map(normalizarHerramienta) : [],
+    herramientas: Array.isArray(raw.herramientas) ? raw.herramientas : HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
     historialRelevos: Array.isArray(raw.historialRelevos) ? raw.historialRelevos : [],
+    historialHerramientas: Array.isArray(raw.historialHerramientas) ? raw.historialHerramientas : [],
     audit: Array.isArray(raw.audit) ? raw.audit : [],
     observaciones: raw.observaciones ?? "",
     firmaDataURL: raw.firmaDataURL ?? null,
@@ -96,10 +81,6 @@ function normalizarTurno(raw: Turno): Turno {
     barril: raw.barril ?? null,
     muerto: raw.muerto ?? null,
     casing: Array.isArray(raw.casing) ? raw.casing.map(normalizarCasingRow) : [],
-    dieselLitros: raw.dieselLitros ?? null,
-    otrosInsumos: Array.isArray(raw.otrosInsumos) ? raw.otrosInsumos : [],
-    horometroInicial: raw.horometroInicial ?? null,
-    horometroFinal: raw.horometroFinal ?? null,
   };
 }
 
@@ -153,20 +134,17 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     barril: null,
     muerto: null,
     casing: [],
-    horometroInicial: null,
-    horometroFinal: null,
     inicializado: false,
     operador: "",
     ayudante1: "",
     ayudante2: "",
     ayudante3: "",
     tramos: [],
-    herramientas: [],
+    herramientas: HERRAMIENTAS_INICIALES.map((h) => ({ ...h })),
     historialRelevos: [],
+    historialHerramientas: [],
     bitacora: [],
     insumos: [],
-    dieselLitros: null,
-    otrosInsumos: [],
     observaciones: "",
     firmaDataURL: null,
     audit: [
@@ -260,39 +238,4 @@ export async function buscarUltimosTurnosPorPozo(
     .sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0))
     .slice(0, cantidad)
     .map(normalizarTurno);
-}
-
-/**
- * Busca en el historial local de la tablet el último "Horómetro Final"
- * registrado, sin importar el pozo — el horómetro es correlativo del
- * equipo completo, no de un pozo en particular.
- */
-export async function buscarUltimoHorometroFinal(): Promise<number | null> {
-  const db = await getDB();
-  const todos = await db.getAll("turnos");
-  let ultimoValor: number | null = null;
-  let ultimaFecha = "";
-  for (const t of todos) {
-    if (t.horometroFinal == null) continue;
-    if (t.fecha > ultimaFecha) {
-      ultimaFecha = t.fecha;
-      ultimoValor = t.horometroFinal;
-    }
-  }
-  return ultimoValor;
-}
-
-export async function buscarUltimaHerramientaPorTipo(
-  tipo: HerramientaTipo,
-): Promise<HerramientaFila | null> {
-  const db = await getDB();
-  const todos = await db.getAll("turnos");
-  let ultima: HerramientaFila | null = null;
-  for (const t of todos) {
-    for (const h of t.herramientas ?? []) {
-      if (h.tipo !== tipo) continue;
-      if (!ultima || h.creadoEn > ultima.creadoEn) ultima = h;
-    }
-  }
-  return ultima;
 }

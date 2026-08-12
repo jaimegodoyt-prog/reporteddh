@@ -4,10 +4,25 @@ import {
   TrendingUp,
   AlertTriangle,
   Trash2,
+  Wrench,
+  Repeat,
+  X,
+  Check,
+  Drill,
+  History,
   Layers,
   Gauge,
 } from "lucide-react";
-import type { Tramo, TipoRoca, CasingRow } from "@/types";
+import { useState } from "react";
+import type {
+  Tramo,
+  TipoRoca,
+  CasingRow,
+  HerramientaTipo,
+  Herramienta,
+  CambioHerramientaLog,
+} from "@/types";
+import { HERRAMIENTA_LABELS, hora } from "@/config";
 
 const OPCIONES_ROCA: TipoRoca[] = [
   "Semi compacta",
@@ -22,11 +37,18 @@ interface Props {
   tramos: Tramo[];
   profundidadInicial: number | null;
   turnoActivo: boolean;
+  herramientas: Herramienta[];
+  historialHerramientas: CambioHerramientaLog[];
+  operador: string;
   turnoCerrado: boolean;
   onAgregar: () => void;
   onChangeTramo: (id: string, patch: Partial<Tramo>) => void;
   onBlurTramo: (id: string) => void;
   onEliminarTramo: (id: string) => void;
+  onCambiarHerramienta: (
+    tipo: HerramientaTipo,
+    datos: { diametro: string; marca: string; serie: string },
+  ) => void;
   barril: number | null;
   muerto: number | null;
   onChangeBarrilMuerto: (patch: { barril?: number | null; muerto?: number | null }) => void;
@@ -42,11 +64,15 @@ export function ControlTramos({
   tramos,
   profundidadInicial,
   turnoActivo,
+  herramientas,
+  historialHerramientas,
+  operador,
   turnoCerrado,
   onAgregar,
   onChangeTramo,
   onBlurTramo,
   onEliminarTramo,
+  onCambiarHerramienta,
   barril,
   muerto,
   onChangeBarrilMuerto,
@@ -178,14 +204,12 @@ export function ControlTramos({
                       className={`border-t border-slate-700/50 ${esUltimo ? "bg-emerald-500/5" : ""}`}
                     >
                       <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
-                      {/* Hta. desde - bloqueado */}
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1.5 text-slate-400 font-bold">
                           <Lock className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                           {tramo.htaDesde.toFixed(2)}
                         </div>
                       </td>
-                      {/* Agrega */}
                       <td className="px-3 py-2">
                         <input
                           type="number"
@@ -206,19 +230,16 @@ export function ControlTramos({
                           placeholder="0"
                         />
                       </td>
-                      {/* Total Hta. - auto */}
                       <td className="px-3 py-2">
                         <span className="font-black text-base text-sky-300">
                           {tramo.totalHta.toFixed(2)}
                         </span>
                       </td>
-                      {/* Fondo - auto */}
                       <td className="px-3 py-2">
                         <span className="font-black text-base text-emerald-300">
                           {tramo.fondo.toFixed(2)}
                         </span>
                       </td>
-                      {/* Resta */}
                       <td className="px-3 py-2">
                         <input
                           type="number"
@@ -239,7 +260,6 @@ export function ControlTramos({
                           placeholder="—"
                         />
                       </td>
-                      {/* Perf. - auto */}
                       <td className="px-3 py-2">
                         <span
                           className={`font-black text-base ${
@@ -249,7 +269,6 @@ export function ControlTramos({
                           {tramo.perf != null ? tramo.perf.toFixed(2) : "—"}
                         </span>
                       </td>
-                      {/* Recuperación */}
                       <td className="px-3 py-2">
                         <input
                           type="number"
@@ -275,7 +294,6 @@ export function ControlTramos({
                           placeholder="—"
                         />
                       </td>
-                      {/* Tipo de roca */}
                       <td className="px-3 py-2">
                         <select
                           value={tramo.tipoRoca}
@@ -434,6 +452,195 @@ export function ControlTramos({
           )}
         </div>
       </section>
+
+      {/* Panel lateral de herramientas */}
+      <aside className="shrink-0 rounded-xl border border-slate-700/70 bg-slate-800/60 p-5 flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-emerald-400" />
+            Herramientas en Pozo
+          </h2>
+        </div>
+        <span className="text-xs text-slate-500 mb-3 block">Heredadas del turno anterior</span>
+
+        <div className="space-y-3">
+          {herramientas.map((h) => (
+            <TarjetaHerramienta
+              key={h.tipo}
+              herramienta={h}
+              turnoCerrado={turnoCerrado}
+              onCambiar={onCambiarHerramienta}
+            />
+          ))}
+        </div>
+
+        {historialHerramientas.length > 0 && (
+          <div className="mt-5 border-t border-slate-700/60 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5" />
+              Historial de cambios
+            </p>
+            <div className="space-y-1.5 max-h-40 overflow-auto scrollbar-thin">
+              {historialHerramientas
+                .slice()
+                .reverse()
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className="text-xs text-slate-400 flex items-center justify-between gap-2 bg-slate-900/40 rounded-md px-2 py-1.5"
+                  >
+                    <span>
+                      <span className="text-slate-200 font-semibold">
+                        {HERRAMIENTA_LABELS[c.tipo]}
+                      </span>{" "}
+                      — {c.diametro} · {c.marca} · {c.serie}
+                    </span>
+                    <span className="text-slate-500 shrink-0">{hora(c.cambiadoEn)}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function TarjetaHerramienta({
+  herramienta,
+  turnoCerrado,
+  onCambiar,
+}: {
+  herramienta: Herramienta;
+  turnoCerrado: boolean;
+  onCambiar: (
+    tipo: HerramientaTipo,
+    datos: { diametro: string; marca: string; serie: string },
+  ) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-slate-700/60 bg-slate-900/50 p-4">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2">
+          <Drill className="w-5 h-5 text-sky-400" />
+          <span className="font-bold text-slate-100">{HERRAMIENTA_LABELS[herramienta.tipo]}</span>
+        </div>
+        {!turnoCerrado && (
+          <button
+            onClick={() => setEditando(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-700 hover:bg-slate-600 px-3 py-2 text-xs font-bold text-slate-100 transition active:scale-95"
+          >
+            <Repeat className="w-3.5 h-3.5" />
+            Cambiar
+          </button>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-sm">
+        <Dato label="Diámetro" valor={herramienta.diametro} />
+        <Dato label="Marca" valor={herramienta.marca} />
+        <Dato label="Serie" valor={herramienta.serie} />
+      </div>
+
+      {editando && (
+        <ModalCambiar
+          herramienta={herramienta}
+          onConfirm={(datos) => {
+            onCambiar(herramienta.tipo, datos);
+            setEditando(false);
+          }}
+          onCancel={() => setEditando(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function Dato({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-slate-200 font-semibold truncate">{valor || "—"}</p>
+    </div>
+  );
+}
+
+function ModalCambiar({
+  herramienta,
+  onConfirm,
+  onCancel,
+}: {
+  herramienta: Herramienta;
+  onConfirm: (datos: { diametro: string; marca: string; serie: string }) => void;
+  onCancel: () => void;
+}) {
+  const [diametro, setDiametro] = useState(herramienta.diametro);
+  const [marca, setMarca] = useState(herramienta.marca);
+  const [serie, setSerie] = useState(herramienta.serie);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <Repeat className="w-5 h-5 text-emerald-400" />
+            Cambiar {HERRAMIENTA_LABELS[herramienta.tipo]}
+          </h3>
+          <button
+            onClick={onCancel}
+            className="p-1.5 rounded-md text-slate-400 hover:text-slate-100 hover:bg-slate-700 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <span className="campo-label">Nuevo Diámetro</span>
+            <input
+              className="campo-input"
+              value={diametro}
+              onChange={(e) => setDiametro(e.target.value)}
+              placeholder="Ej. 6 1/2 in"
+              autoFocus
+            />
+          </div>
+          <div>
+            <span className="campo-label">Nueva Marca</span>
+            <input
+              className="campo-input"
+              value={marca}
+              onChange={(e) => setMarca(e.target.value)}
+              placeholder="Ej. Sandvik"
+            />
+          </div>
+          <div>
+            <span className="campo-label">Nueva Serie</span>
+            <input
+              className="campo-input"
+              value={serie}
+              onChange={(e) => setSerie(e.target.value)}
+              placeholder="Ej. COR-88512-C"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-5">
+          <button
+            onClick={onCancel}
+            className="btn-grande bg-slate-700 hover:bg-slate-600 text-slate-100 flex-1"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onConfirm({ diametro, marca, serie })}
+            disabled={!diametro.trim() || !marca.trim() || !serie.trim()}
+            className="btn-grande bg-emerald-600 hover:bg-emerald-500 text-white flex-1"
+          >
+            <Check className="w-5 h-5" />
+            Confirmar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

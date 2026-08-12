@@ -21,9 +21,9 @@ import { fechaHora } from "@/config";
 
 // Agrupa las filas de Casing por diámetro consecutivo, mostrando la
 // profundidad alcanzada por cada diámetro (el último Total de ese grupo).
-function resumenCasing(casing: CasingRow[]): { diametro: string; profundidad: number }[] {
+function resumenCasing(casing: CasingRow[] | undefined): { diametro: string; profundidad: number }[] {
   const grupos: { diametro: string; profundidad: number }[] = [];
-  for (const c of casing) {
+  for (const c of casing ?? []) {
     const ultimo = grupos[grupos.length - 1];
     if (ultimo && ultimo.diametro === c.diametro) {
       ultimo.profundidad = c.total;
@@ -287,7 +287,7 @@ export function Inicializacion({
           </div>
         </div>
 
-          {/* Operadores - editables siempre */}
+        {/* Operadores - editables siempre */}
         <div className="border-t border-slate-700/60 pt-4 mt-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -338,7 +338,7 @@ export function Inicializacion({
             >
               <Wrench className="w-5 h-5" />
               Registrar Relevo de Personal
-            </button>
+              </button>
           )}
         </div>
 

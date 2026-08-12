@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "@/supabaseClient";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo, HerramientaTipo, UnidadInsumo } from "@/types";
+import type { Turno, Tramo, CasingRow, ActividadBitacora, Insumo, OtroInsumo, HerramientaFila, HerramientaTipo, UnidadInsumo } from "@/types";
 
 export type MetricasNube = {
   profundidadFinal: number | null;
@@ -53,6 +53,25 @@ type FilaInsumo = {
   nombre_insumo?: string;
   unidad?: string;
   cantidad?: number | null;
+  created_at?: string;
+};
+
+type FilaOtroInsumo = {
+  id?: string;
+  cantidad?: number | null;
+  descripcion?: string;
+  created_at?: string;
+};
+
+type FilaHerramienta = {
+  id?: string;
+  tipo?: string;
+  diametro?: string;
+  marca?: string;
+  serie?: string;
+  estado?: string | null;
+  desde?: number;
+  hasta?: number;
   created_at?: string;
 };
 
@@ -121,23 +140,51 @@ function mapInsumo(row: FilaInsumo, idx: number): Insumo {
   };
 }
 
+function mapOtroInsumo(row: FilaOtroInsumo, idx: number): OtroInsumo {
+  return {
+    id: (row.id as string) ?? `rt-oi-${idx}`,
+    cantidad: row.cantidad != null ? Number(row.cantidad) : null,
+    descripcion: row.descripcion ?? "",
+    creadoEn: row.created_at ?? new Date().toISOString(),
+  };
+}
+
+function mapHerramienta(row: FilaHerramienta, idx: number): HerramientaFila {
+  return {
+    id: (row.id as string) ?? `rt-h-${idx}`,
+    tipo: (row.tipo as HerramientaTipo) ?? "corona",
+    diametro: row.diametro ?? "",
+    marca: row.marca ?? "",
+    serie: row.serie ?? "",
+    estado: (row.estado as HerramientaFila["estado"]) ?? "",
+    desde: Number(row.desde ?? 0),
+    hasta: Number(row.hasta ?? 0),
+    creadoEn: row.created_at ?? new Date().toISOString(),
+  };
+}
+
 async function cargarDatosNube(
   cloudId: string,
   profundidadInicial: number | null,
 ): Promise<ActualizacionRealtime | null> {
-  const [reporteRes, tramosRes, casingRes, bitacoraRes, insumosRes] = await Promise.all([
-    supabase.from("reportes_turno").select("profundidad_final, profundidad_inicial, updated_at").eq("id", cloudId).maybeSingle(),
-    supabase.from("turno_trames").select("*").eq("reporte_id", cloudId).order("created_at"),
-    supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("creado_en"),
-    supabase.from("turno_bitacora").select("*").eq("reporte_id", cloudId).order("created_at"),
-    supabase.from("turno_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
-  ]);
+  const [reporteRes, tramosRes, casingRes, bitacoraRes, insumosRes, otrosInsumosRes, herramientasRes] =
+    await Promise.all([
+      supabase.from("reportes_turno").select("profundidad_final, profundidad_inicial, updated_at").eq("id", cloudId).maybeSingle(),
+      supabase.from("turno_trames").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_bitacora").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_otros_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_herramientas").select("*").eq("reporte_id", cloudId).order("created_at"),
+    ]);
 
   const reporte = reporteRes.data as FilaReporte | null;
   const tramos = ((tramosRes.data ?? []) as FilaTramo[]).map(mapTramo);
   const casing = ((casingRes.data ?? []) as FilaCasing[]).map(mapCasing);
   const bitacora = ((bitacoraRes.data ?? []) as FilaBitacora[]).map(mapBitacora);
   const insumos = ((insumosRes.data ?? []) as FilaInsumo[]).map(mapInsumo);
+  const otrosInsumos = ((otrosInsumosRes.data ?? []) as FilaOtroInsumo[]).map(mapOtroInsumo);
+  const herramientas = ((herramientasRes.data ?? []) as FilaHerramienta[]).map(mapHerramienta);
 
   const profundidadFinal =
     reporte?.profundidad_final ??
@@ -152,7 +199,7 @@ async function cargarDatosNube(
       totalInsumos: insumos.length,
       actualizadoEn: reporte?.updated_at ?? new Date().toISOString(),
     },
-    parche: { tramos, casing, bitacora, insumos },
+    parche: { tramos, casing, bitacora, insumos, otrosInsumos, herramientas },
   };
 }
 
@@ -198,6 +245,16 @@ export function suscribirTurnoRealtime(
       "postgres_changes",
       { event: "*", schema: "public", table: "turno_insumos", filter: `reporte_id=eq.${cloudId}` },
       () => void notificar("insumos"),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "turno_otros_insumos", filter: `reporte_id=eq.${cloudId}` },
+      () => void notificar("insumos"),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "turno_herramientas", filter: `reporte_id=eq.${cloudId}` },
+      () => void notificar("reporte"),
     )
     .subscribe();
 

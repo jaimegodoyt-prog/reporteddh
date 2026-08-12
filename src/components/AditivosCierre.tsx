@@ -71,7 +71,7 @@ export function AditivosCierre({
   const turnoActivo = turno.estado === "iniciado";
   const firmado = !!turno.firmaDataURL;
   const hayInsumos = turno.insumos.length > 0;
-  const hayOtrosInsumos = turno.otrosInsumos.length > 0;
+  const hayOtrosInsumos = (turno.otrosInsumos ?? []).length > 0;
 
   const puedeCerrar =
     turnoActivo && firmado && turno.operador.trim() !== "";

@@ -1025,15 +1025,6 @@ export default function App() {
                 onChangeInsumo={cambiarInsumo}
                 onBlurInsumos={syncInsumosOnBlur}
                 onEliminarInsumo={eliminarInsumo}
-                onChangeDiesel={cambiarDiesel}
-                onChangeHorometroFinal={cambiarHorometroFinal}
-                onAgregarOtroInsumo={agregarOtroInsumo}
-                onChangeOtroInsumo={cambiarOtroInsumo}
-                onBlurOtrosInsumos={syncOtrosInsumosOnBlur}
-                onEliminarOtroInsumo={eliminarOtroInsumo}
-                onAgregarHerramienta={agregarHerramienta}
-                onChangeHerramienta={cambiarHerramienta}
-                onBlurHerramienta={syncHerramientaOnBlur}
                 onChangeObservaciones={(v) => patchTurno({ observaciones: v })}
                 onFirmaChange={(v) => patchTurno({ firmaDataURL: v })}
                 onCerrarTurno={cerrarTurno}

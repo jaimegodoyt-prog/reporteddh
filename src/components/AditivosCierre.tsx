@@ -480,7 +480,7 @@ function TablaHerramienta({
         )}
       </div>
 
-      {filas.length === 0 ? (
+      {filasSeguras.length === 0 ? (
         <p className="text-xs text-slate-500">Sin registros de {HERRAMIENTA_LABELS[tipo]} en este turno.</p>
       ) : (
         <div className="overflow-x-auto">

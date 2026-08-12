@@ -453,6 +453,17 @@ function TablaHerramienta({
   // Desde/Hasta son automáticos (con candado) para corona, escareador y
   // zapata — solo el Tricono los captura manualmente.
   const desdeHastaManual = tipo === "tricono";
+  // Blindaje: normaliza cada fila para que ningún campo pueda venir
+  // undefined, sin importar si la herramienta es de antes del rediseño.
+  const filasSeguras = filas.map((h) => ({
+    ...h,
+    diametro: h.diametro ?? "",
+    marca: h.marca ?? "",
+    serie: h.serie ?? "",
+    estado: h.estado ?? "",
+    desde: h.desde ?? 0,
+    hasta: h.hasta ?? 0,
+  }));
 
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-4">

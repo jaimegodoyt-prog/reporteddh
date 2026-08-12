@@ -230,35 +230,64 @@ export function Inicializacion({
             />
           </div>
 
-          {/* Casing - se autocompleta desde la pestaña Tramos */}
+          {/* Casing - se autocompleta desde la pestaña Tramos, agrupado por diámetro */}
           <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
               Casing
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="campo-label">Diámetro</span>
-                <div className="campo-bloqueado">
-                  <Lock className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span className="font-bold text-slate-200">
-                    {turno.casingDiametro || "—"}
-                  </span>
+            {resumenCasing(turno.casing).length === 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="campo-label">Diámetro</span>
+                  <div className="campo-bloqueado">
+                    <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span className="font-bold text-slate-200">—</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="campo-label">Profundidad</span>
+                  <div className="campo-bloqueado">
+                    <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                    <span className="font-bold text-slate-200">—</span>
+                  </div>
                 </div>
               </div>
-              <div>
-                <span className="campo-label">Profundidad</span>
-                <div className="campo-bloqueado">
-                  <Lock className="w-4 h-4 text-slate-500 shrink-0" />
-                  <span className="font-bold text-slate-200">
-                    {turno.casingProfundidad != null ? `${turno.casingProfundidad} m` : "—"}
-                  </span>
-                </div>
-              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <th className="pb-1">Diámetro</th>
+                    <th className="pb-1">Profundidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumenCasing(turno.casing).map((g, i) => (
+                    <tr key={i}>
+                      <td className="py-0.5 font-bold text-slate-200 flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        {g.diametro || "—"}
+                      </td>
+                      <td className="py-0.5 font-bold text-slate-200">{g.profundidad} m</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Horómetro Inicial - se arrastra del último Horómetro Final registrado */}
+          <div className="mt-4 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
+            <span className="campo-label">Horómetro Inicial</span>
+            <div className="campo-bloqueado">
+              <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+              <span className="font-bold text-slate-200">
+                {turno.horometroInicial != null ? turno.horometroInicial : "—"}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Operadores - editables siempre */}
+          {/* Operadores - editables siempre */}
         <div className="border-t border-slate-700/60 pt-4 mt-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">

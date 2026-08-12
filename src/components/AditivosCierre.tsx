@@ -433,6 +433,7 @@ export function AditivosCierre({
 }
 
 /* ---------- Tabla por tipo de herramienta ---------- */
+
 function TablaHerramienta({
   tipo,
   filas,

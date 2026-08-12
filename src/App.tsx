@@ -989,6 +989,7 @@ export default function App() {
                   muerto={turno.muerto}
                   onChangeBarrilMuerto={(patch) => patchTurno(patch)}
                   barrasArrastre={arrastrePozo.totalHta}
+                  casingDiametroArrastre={arrastrePozo.casingDiametro}
                   casing={turno.casing}
                   onAgregarCasing={agregarCasing}
                   onChangeCasing={cambiarCasing}

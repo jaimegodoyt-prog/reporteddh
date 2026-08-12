@@ -103,7 +103,9 @@ export default function App() {
       if (t && esUUIDValido(t.cloudId)) {
         ignorarRealtimeRef.current = true;
         const r = await autoSyncTurno(t, "todo");
-        ignorarRealtimeRef.current = false;
+        setTimeout(() => {
+          ignorarRealtimeRef.current = false;
+        }, 2500);
         if (r.ok && !r.offline) setModoTerreno(false);
       }
     };

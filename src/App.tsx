@@ -606,6 +606,126 @@ export default function App() {
       });
     });
   }, [turno?.pozo, turno?.tramos.length]);
+  const agregarHerramienta = useCallback(
+    async (tipo: HerramientaTipo) => {
+      if (!turno) return;
+      const anteriorMismoTipo = [...turno.herramientas].reverse().find((h) => h.tipo === tipo);
+      const fondoActual =
+        turno.tramos.length > 0 ? turno.tramos[turno.tramos.length - 1].fondo : turno.profundidadInicial ?? 0;
+      const casingDesdeActual = turno.casing.length > 0 ? turno.casing[0].desde : 0;
+      const casingTotalActual = turno.casing.length > 0 ? turno.casing[turno.casing.length - 1].total : 0;
+
+      let base = anteriorMismoTipo ?? null;
+      if (!base) base = await buscarUltimaHerramientaPorTipo(tipo);
+      if (!base) base = HERRAMIENTAS_INICIALES.find((h) => h.tipo === tipo) ?? null;
+
+      let desde = 0;
+      let hasta = 0;
+      if (tipo === "corona" || tipo === "escareador") {
+        desde = fondoActual;
+        hasta = fondoActual;
+      } else if (tipo === "zapata") {
+        desde = casingDesdeActual;
+        hasta = casingTotalActual;
+      } else {
+        desde = base?.hasta ?? 0;
+        hasta = desde;
+      }
+
+      const nueva: HerramientaFila = {
+        id: uid(),
+        tipo,
+        diametro: base?.diametro ?? "",
+        marca: base?.marca ?? "",
+        serie: base?.serie ?? "",
+        estado: "Usado",
+        desde,
+        hasta,
+        creadoEn: ahoraISO(),
+      };
+      const conAudit = pushAudit(
+        { ...turno, herramientas: [...turno.herramientas, nueva] },
+        "herramienta_agregada",
+        `${tipo} agregada`,
+      );
+      persistirYSync(conAudit, "herramientas", nueva.id);
+    },
+    [turno, persistirYSync],
+  );
+
+  const cambiarHerramienta = useCallback(
+    (id: string, patch: Partial<HerramientaFila>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          herramientas: turno.herramientas.map((h) => (h.id === id ? { ...h, ...patch } : h)),
+        },
+        "herramientas",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncHerramientaOnBlur = useCallback(
+    (id: string) => flushSyncPendiente("herramientas", id),
+    [flushSyncPendiente],
+  );
+
+  // Siembra inicial: si el turno todavía no tiene filas de herramientas,
+  // hereda (100% local) la última fila conocida de cada tipo en esta
+  // tablet, o los datos de ejemplo si es la primera vez que se usa la app.
+  useEffect(() => {
+    if (!turno || turno.herramientas.length > 0) return;
+    const tId = turno.id;
+    (async () => {
+      const tipos: HerramientaTipo[] = ["corona", "escareador", "zapata", "tricono"];
+      const filas: HerramientaFila[] = [];
+      for (const tipo of tipos) {
+        let base = await buscarUltimaHerramientaPorTipo(tipo);
+        if (!base) base = HERRAMIENTAS_INICIALES.find((h) => h.tipo === tipo) ?? null;
+        if (!base) continue;
+        filas.push({ ...base, id: uid(), creadoEn: ahoraISO() });
+      }
+      if (filas.length > 0 && turnoRef.current?.id === tId && turnoRef.current.herramientas.length === 0) {
+        persistirYSync({ ...turnoRef.current, herramientas: filas }, "herramientas");
+      }
+    })();
+  }, [turno?.id]);
+
+  // Actualización en vivo: mientras una fila de Corona/Escareador/Zapata es
+  // la más reciente de su tipo, su "Hasta" (y el "Desde" de Zapata) sigue el
+  // Fondo actual de Tramos o el estado actual de Casing.
+  useEffect(() => {
+    if (!turno) return;
+    const fondoActual =
+      turno.tramos.length > 0 ? turno.tramos[turno.tramos.length - 1].fondo : turno.profundidadInicial ?? 0;
+    const casingDesdeActual = turno.casing.length > 0 ? turno.casing[0].desde : 0;
+    const casingTotalActual = turno.casing.length > 0 ? turno.casing[turno.casing.length - 1].total : 0;
+
+    let cambio = false;
+    const nuevasHerramientas = turno.herramientas.map((h, idx, arr) => {
+      const esUltimaDeSuTipo = !arr.slice(idx + 1).some((x) => x.tipo === h.tipo);
+      if (!esUltimaDeSuTipo) return h;
+      if (h.tipo === "corona" || h.tipo === "escareador") {
+        if (h.hasta !== fondoActual) {
+          cambio = true;
+          return { ...h, hasta: fondoActual };
+        }
+      } else if (h.tipo === "zapata") {
+        if (h.desde !== casingDesdeActual || h.hasta !== casingTotalActual) {
+          cambio = true;
+          return { ...h, desde: casingDesdeActual, hasta: casingTotalActual };
+        }
+      }
+      return h;
+    });
+
+    if (cambio) {
+      persistirYSync({ ...turno, herramientas: nuevasHerramientas }, "herramientas");
+    }
+  }, [turno?.tramos, turno?.casing, turno?.herramientas.length]);
 
   const cambiarHerramienta = useCallback(
     (

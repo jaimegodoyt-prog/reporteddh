@@ -320,7 +320,7 @@ export function AditivosCierre({
             <TablaHerramienta
               key={tipo}
               tipo={tipo}
-              filas={turno.herramientas.filter((h) => h.tipo === tipo)}
+              filas={(turno.herramientas ?? []).filter((h) => h.tipo === tipo)}
               turnoActivo={turnoActivo}
               turnoCerrado={turnoCerrado}
               onAgregar={() => onAgregarHerramienta(tipo)}

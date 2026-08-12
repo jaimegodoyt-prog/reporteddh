@@ -384,6 +384,10 @@ export function ControlTramos({
                 <tbody>
                   {casing.map((c, idx) => {
                     const esUltimo = idx === casing.length - 1;
+                    const esInicioDeGrupo =
+                      idx === 0
+                        ? c.diametro !== casingDiametroArrastre
+                        : casing[idx - 1].diametro !== c.diametro;
                     return (
                       <tr key={c.id} className="border-t border-slate-800">
                         <td className="px-2 py-1.5">
@@ -401,10 +405,22 @@ export function ControlTramos({
                           />
                         </td>
                         <td className="px-2 py-1.5">
-                          <div className="flex items-center gap-1 text-slate-400 font-bold">
-                            <Lock className="w-3 h-3 text-slate-600 shrink-0" />
-                            {c.desde.toFixed(2)}
-                          </div>
+                          {esInicioDeGrupo && esUltimo ? (
+                            <input
+                              type="number"
+                              value={c.desde}
+                              onChange={(e) => onChangeCasing(c.id, { desde: Number(e.target.value) })}
+                              onBlur={() => onBlurCasing(c.id)}
+                              step="0.01"
+                              placeholder="0"
+                              className="w-20 rounded-md border border-slate-600 bg-slate-900 text-slate-100 px-2 py-1 font-semibold outline-none focus:border-sky-500"
+                            />
+                          ) : (
+                            <div className="flex items-center gap-1 text-slate-400 font-bold">
+                              <Lock className="w-3 h-3 text-slate-600 shrink-0" />
+                              {c.desde.toFixed(2)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-1.5">
                           <input

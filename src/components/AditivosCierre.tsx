@@ -497,8 +497,8 @@ function TablaHerramienta({
               </tr>
             </thead>
             <tbody>
-              {filas.map((h, idx) => {
-                const esUltimo = idx === filas.length - 1;
+              {filasSeguras.map((h, idx) => {
+                const esUltimo = idx === filasSeguras.length - 1;
                 const editable = esUltimo && !turnoCerrado;
                 const total = h.hasta - h.desde;
                 return (

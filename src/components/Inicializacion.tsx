@@ -15,9 +15,24 @@ import {
   WifiOff,
   RefreshCw,
 } from "lucide-react";
-import type { Turno } from "@/types";
+import type { Turno, CasingRow } from "@/types";
 import type { MetricasNube } from "@/realtime";
 import { fechaHora } from "@/config";
+
+// Agrupa las filas de Casing por diámetro consecutivo, mostrando la
+// profundidad alcanzada por cada diámetro (el último Total de ese grupo).
+function resumenCasing(casing: CasingRow[]): { diametro: string; profundidad: number }[] {
+  const grupos: { diametro: string; profundidad: number }[] = [];
+  for (const c of casing) {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.diametro === c.diametro) {
+      ultimo.profundidad = c.total;
+    } else {
+      grupos.push({ diametro: c.diametro, profundidad: c.total });
+    }
+  }
+  return grupos;
+}
 
 interface Props {
   turno: Turno;

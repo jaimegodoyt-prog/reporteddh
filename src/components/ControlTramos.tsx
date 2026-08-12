@@ -77,6 +77,7 @@ export function ControlTramos({
   muerto,
   onChangeBarrilMuerto,
   barrasArrastre,
+  casingDiametroArrastre,
   casing,
   onAgregarCasing,
   onChangeCasing,

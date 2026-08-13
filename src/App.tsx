@@ -5,10 +5,12 @@ import type {
   Tramo,
   CasingRow,
   HerramientaTipo,
+  HerramientaFila,
+  OtroInsumo,
   ActividadBitacora,
   Insumo,
 } from "@/types";
-import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit, buscarUltimosTurnosPorPozo } from "@/db";
+import { cargarTurnoActual, guardarTurno, cerrarTurno as cerrarEnDB, pushAudit, buscarUltimosTurnosPorPozo, buscarUltimaHerramientaPorTipo } from "@/db";
 import {
   uid,
   ahoraISO,
@@ -607,7 +609,7 @@ export default function App() {
     });
   }, [turno?.pozo, turno?.tramos.length]);
 
-  const cambiarHerramienta = useCallback(
+  const cambiarHerramientaTramos = useCallback(
     (
       tipo: HerramientaTipo,
       datos: { diametro: string; marca: string; serie: string },
@@ -629,6 +631,111 @@ export default function App() {
         `${tipo}: ${datos.marca} ${datos.serie}`,
       );
       persistirYSync(conAudit, "reporte");
+    },
+    [turno, persistirYSync],
+  );
+
+  const agregarHerramienta = useCallback(
+    async (tipo: HerramientaTipo) => {
+      if (!turno) return;
+      const previa = await buscarUltimaHerramientaPorTipo(tipo);
+      const nueva: HerramientaFila = previa ?? {
+        id: uid(),
+        tipo,
+        diametro: "",
+        marca: "",
+        serie: "",
+        estado: "Nuevo",
+        desde: 0,
+        hasta: 0,
+        creadoEn: ahoraISO(),
+      };
+      persistirYSync(
+        { ...turno, herramientas: [...turno.herramientas, nueva] },
+        "herramientas",
+        nueva.id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const cambiarHerramienta = useCallback(
+    (id: string, patch: Partial<HerramientaFila>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          herramientas: turno.herramientas.map((h) =>
+            h.id === id ? { ...h, ...patch } : h,
+          ),
+        },
+        "herramientas",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncHerramientaOnBlur = useCallback(
+    (id: string) => flushSyncPendiente("herramientas", id),
+    [flushSyncPendiente],
+  );
+
+  const cambiarDiesel = useCallback(
+    (v: number | null) => patchTurno({ dieselLitros: v }),
+    [patchTurno],
+  );
+
+  const cambiarHorometroFinal = useCallback(
+    (v: number | null) => patchTurno({ horometroFinal: v }),
+    [patchTurno],
+  );
+
+  const agregarOtroInsumo = useCallback(() => {
+    if (!turno) return;
+    const nuevo: OtroInsumo = {
+      id: uid(),
+      cantidad: null,
+      descripcion: "",
+      creadoEn: ahoraISO(),
+    };
+    persistirYSync(
+      { ...turno, otrosInsumos: [...turno.otrosInsumos, nuevo] },
+      "otrosinsumos",
+      nuevo.id,
+    );
+  }, [turno, persistirYSync]);
+
+  const cambiarOtroInsumo = useCallback(
+    (id: string, patch: Partial<OtroInsumo>) => {
+      if (!turno) return;
+      persistirYSync(
+        {
+          ...turno,
+          otrosInsumos: turno.otrosInsumos.map((o) =>
+            o.id === id ? { ...o, ...patch } : o,
+          ),
+        },
+        "otrosinsumos",
+        id,
+      );
+    },
+    [turno, persistirYSync],
+  );
+
+  const syncOtrosInsumosOnBlur = useCallback(
+    () => flushSyncPendiente("otrosinsumos"),
+    [flushSyncPendiente],
+  );
+
+  const eliminarOtroInsumo = useCallback(
+    (id: string) => {
+      if (!turno) return;
+      persistirYSync(
+        { ...turno, otrosInsumos: turno.otrosInsumos.filter((o) => o.id !== id) },
+        "otrosinsumos",
+        id,
+      );
     },
     [turno, persistirYSync],
   );
@@ -984,7 +1091,7 @@ export default function App() {
                   onChangeTramo={cambiarTramo}
                   onBlurTramo={syncTramoOnBlur}
                   onEliminarTramo={eliminarTramo}
-                  onCambiarHerramienta={cambiarHerramienta}
+                  onCambiarHerramienta={cambiarHerramientaTramos}
                   barril={turno.barril}
                   muerto={turno.muerto}
                   onChangeBarrilMuerto={(patch) => patchTurno(patch)}

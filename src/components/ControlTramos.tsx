@@ -1,24 +1,11 @@
-import {
-  Plus,
-  Lock,
-  TrendingUp,
-  AlertTriangle,
-  Trash2,
-  Wrench,
-  Repeat,
-  X,
-  Check,
-  Drill,
-  History,
-  Layers,
-  Gauge,
-} from "lucide-react";
+import { Plus, Lock, TrendingUp, TriangleAlert as AlertTriangle, Trash2, Wrench, Repeat, X, Check, Drill, History, Layers, Gauge } from "lucide-react";
 import { useState } from "react";
 import type {
   Tramo,
   TipoRoca,
   CasingRow,
   HerramientaTipo,
+  HerramientaFila,
   Herramienta,
   CambioHerramientaLog,
 } from "@/types";
@@ -37,7 +24,7 @@ interface Props {
   tramos: Tramo[];
   profundidadInicial: number | null;
   turnoActivo: boolean;
-  herramientas: Herramienta[];
+  herramientas: HerramientaFila[];
   historialHerramientas: CambioHerramientaLog[];
   operador: string;
   turnoCerrado: boolean;
@@ -511,7 +498,7 @@ function TarjetaHerramienta({
   turnoCerrado,
   onCambiar,
 }: {
-  herramienta: Herramienta;
+  herramienta: HerramientaFila;
   turnoCerrado: boolean;
   onCambiar: (
     tipo: HerramientaTipo,
@@ -571,7 +558,7 @@ function ModalCambiar({
   onConfirm,
   onCancel,
 }: {
-  herramienta: Herramienta;
+  herramienta: HerramientaFila;
   onConfirm: (datos: { diametro: string; marca: string; serie: string }) => void;
   onCancel: () => void;
 }) {

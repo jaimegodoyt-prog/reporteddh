@@ -173,7 +173,7 @@ function reporteRowUpdate(t: Turno) {
   };
 }
 
-export type SyncScope = "reporte" | "tramo" | "casing" | "bitacora" | "insumos" | "todo";
+export type SyncScope = "reporte" | "tramo" | "casing" | "bitacora" | "insumos" | "otrosinsumos" | "herramientas" | "todo";
 
 // TABLA 2: turno_trames
 function tramoRow(t: Tramo, reporteId: string) {

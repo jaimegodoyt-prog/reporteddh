@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Turno, AuditEntry, Tramo, CasingRow } from "@/types";
+import type { Turno, AuditEntry, Tramo, CasingRow, HerramientaFila } from "@/types";
 import { ADMIN_CONFIG, HERRAMIENTAS_INICIALES, uid, ahoraISO } from "@/config";
 
 interface DiamantinaDB extends DBSchema {
@@ -75,6 +75,10 @@ function normalizarTurno(raw: Turno): Turno {
     audit: Array.isArray(raw.audit) ? raw.audit : [],
     observaciones: raw.observaciones ?? "",
     firmaDataURL: raw.firmaDataURL ?? null,
+    otrosInsumos: Array.isArray(raw.otrosInsumos) ? raw.otrosInsumos : [],
+    dieselLitros: raw.dieselLitros ?? null,
+    horometroInicial: raw.horometroInicial ?? null,
+    horometroFinal: raw.horometroFinal ?? null,
     programado: raw.programado ?? null,
     casingDiametro: raw.casingDiametro ?? "",
     casingProfundidad: raw.casingProfundidad ?? null,
@@ -145,6 +149,10 @@ function crearTurnoNuevo(profundidadInicial: number | null = null): Turno {
     historialHerramientas: [],
     bitacora: [],
     insumos: [],
+    otrosInsumos: [],
+    dieselLitros: null,
+    horometroInicial: null,
+    horometroFinal: null,
     observaciones: "",
     firmaDataURL: null,
     audit: [
@@ -238,4 +246,35 @@ export async function buscarUltimosTurnosPorPozo(
     .sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0))
     .slice(0, cantidad)
     .map(normalizarTurno);
+}
+
+/**
+ * Busca la última fila de herramienta de un tipo dado en el historial local
+ * (todos los turnos guardados en esta tablet). Se usa para pre-llenar los
+ * datos de una nueva herramienta cuando se agrega al cierre.
+ */
+export async function buscarUltimaHerramientaPorTipo(
+  tipo: string,
+): Promise<HerramientaFila | null> {
+  const db = await getDB();
+  const todos = await db.getAll("turnos");
+  const ordenados = todos.sort((a, b) => (b.fecha > a.fecha ? 1 : b.fecha < a.fecha ? -1 : 0));
+  for (const t of ordenados) {
+    const nt = normalizarTurno(t);
+    const encontrada = [...nt.herramientas].reverse().find((h) => h.tipo === tipo);
+    if (encontrada) {
+      return {
+        id: "heredada-" + uid(),
+        tipo: encontrada.tipo,
+        diametro: encontrada.diametro ?? "",
+        marca: encontrada.marca ?? "",
+        serie: encontrada.serie ?? "",
+        estado: "Usado",
+        desde: 0,
+        hasta: 0,
+        creadoEn: ahoraISO(),
+      };
+    }
+  }
+  return null;
 }

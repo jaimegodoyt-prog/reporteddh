@@ -1,4 +1,18 @@
-export type HerramientaTipo = "tricono" | "escareador" | "corona";
+export type HerramientaTipo = "tricono" | "escareador" | "corona" | "zapata";
+
+export type EstadoHerramienta = "Nuevo" | "Usado";
+
+export interface HerramientaFila {
+  id: string;
+  tipo: HerramientaTipo;
+  diametro: string;
+  marca: string;
+  serie: string;
+  estado: EstadoHerramienta;
+  desde: number;
+  hasta: number;
+  creadoEn: string;
+}
 
 export interface Herramienta {
   tipo: HerramientaTipo;
@@ -6,6 +20,13 @@ export interface Herramienta {
   marca: string;
   serie: string;
   actualizadaEn: string;
+}
+
+export interface OtroInsumo {
+  id: string;
+  cantidad: number | null;
+  descripcion: string;
+  creadoEn: string;
 }
 
 export type TipoRoca =
@@ -118,11 +139,15 @@ export interface Turno {
 
   // Relacional
   tramos: Tramo[];
-  herramientas: Herramienta[];
+  herramientas: HerramientaFila[];
   historialRelevos: CambioOperador[];
   historialHerramientas: CambioHerramientaLog[];
   bitacora: ActividadBitacora[];
   insumos: Insumo[];
+  otrosInsumos: OtroInsumo[];
+  dieselLitros: number | null;
+  horometroInicial: number | null;
+  horometroFinal: number | null;
   observaciones: string;
   firmaDataURL: string | null;
 

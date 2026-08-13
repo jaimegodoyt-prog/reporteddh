@@ -174,8 +174,8 @@ async function cargarDatosNube(
       supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("creado_en"),
       supabase.from("turno_bitacora").select("*").eq("reporte_id", cloudId).order("created_at"),
       supabase.from("turno_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
-      supabase.from("turno_otros_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
-      supabase.from("turno_herramientas").select("*").eq("reporte_id", cloudId).order("created_at"),
+      supabase.from("turno_otros_insumos").select("*").eq("reporte_id", cloudId).order("creado_en"),
+      supabase.from("turno_herramientas").select("*").eq("reporte_id", cloudId).order("creado_en"),
     ]);
 
   const reporte = reporteRes.data as FilaReporte | null;

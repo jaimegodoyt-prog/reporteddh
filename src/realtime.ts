@@ -128,7 +128,7 @@ async function cargarDatosNube(
   const [reporteRes, tramosRes, casingRes, bitacoraRes, insumosRes] = await Promise.all([
     supabase.from("reportes_turno").select("profundidad_final, profundidad_inicial, updated_at").eq("id", cloudId).maybeSingle(),
     supabase.from("turno_trames").select("*").eq("reporte_id", cloudId).order("created_at"),
-    supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("created_at"),
+    supabase.from("turno_casing").select("*").eq("reporte_id", cloudId).order("creado_en"),
     supabase.from("turno_bitacora").select("*").eq("reporte_id", cloudId).order("created_at"),
     supabase.from("turno_insumos").select("*").eq("reporte_id", cloudId).order("created_at"),
   ]);
